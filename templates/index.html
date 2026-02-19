@@ -82,5 +82,49 @@
   </script>
 </head>
 <body>
-    </body>
+
+    <div class="logo-container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="AniWay Logo">
+    </div>
+
+    <h1>AniWay</h1>
+
+    <form method="POST">
+        <h2>Presupuesto</h2>
+        <label>Coste total del viaje (€):</label>
+        <input type="number" step="0.01" name="coste_total" placeholder="0.00" required>
+
+        <h2>Trayectos de Ida</h2>
+        <div id="listaGruposIda"></div>
+        <input type="hidden" id="total_grupos_ida" name="total_grupos_ida" value="0">
+        <button type="button" onclick="agregarGrupo('ida')">+ Añadir grupo de ida</button>
+
+        <h2>Trayectos de Vuelta</h2>
+        <div id="listaGruposVuelta"></div>
+        <input type="hidden" id="total_grupos_vuelta" name="total_grupos_vuelta" value="0">
+        <button type="button" onclick="agregarGrupo('vuelta')">+ Añadir grupo de vuelta</button>
+
+        <button type="submit" style="margin-top: 30px; background: var(--primary); color: white; border: none;">
+            Calcular Reparto de Gastos
+        </button>
+    </form>
+
+    {% if resultados %}
+    <div class="resultados-card">
+        <h2>Resumen por persona</h2>
+        <div class="resultados-list">
+            {% for r in resultados %}
+            <div class="resultado-item">
+                <span class="res-nombre">{{ r.nombre }}</span>
+                <div>
+                    <span class="res-coste">{{ r.coste }} €</span>
+                    <small style="color: var(--text-muted); margin-left: 8px;">{{ r.km }} km</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</body>
 </html>

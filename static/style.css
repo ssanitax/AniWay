@@ -195,3 +195,71 @@ button[type="button"]:hover {
     border: 1px solid #e2e8f0;
     font-family: inherit;
 }
+
+/* 1. Control de visualización del Body */
+body {
+    min-height: 100vh;
+    justify-content: flex-start; /* Evita que el contenido salte al centro */
+}
+
+/* 2. Mejoras en el contenedor de rutas (Origen/Destino) */
+.route-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+/* Ajuste para móviles: en pantallas pequeñas, uno debajo del otro */
+@media (max-width: 480px) {
+    .route-inputs {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 3. Estilo para los inputs de Google (Autocompletado) */
+.geo-input {
+    background-image: url('https://www.gstatic.com/images/icons/material/system/2x/place_gm_blue_18dp.png');
+    background-repeat: no-repeat;
+    background-position: 8px center;
+    background-size: 16px;
+    padding-left: 30px !important; /* Espacio para el icono de pin */
+}
+
+/* 4. Estilo de los campos de KM (Solo lectura) */
+.km-readonly {
+    background-color: #f1f5f9 !important;
+    border-style: dashed !important;
+    color: var(--primary) !important;
+    font-weight: 700;
+    cursor: not-allowed;
+    text-align: center;
+}
+
+/* 5. Feedback visual de carga/estado */
+.status-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: -12px;
+    margin-bottom: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+/* 6. Animación sutil para la aparición de nuevos grupos */
+.grupo {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 7. Ajuste del Logo para que no sea gigante */
+.logo-container img {
+    max-height: 80px;
+    width: auto;
+    object-fit: contain;
+}
