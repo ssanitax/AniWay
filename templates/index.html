@@ -77,15 +77,20 @@
 </form>
 
 {% if resultados %}
-<h2>Resumen por persona</h2>
-<ul class="resultados">
-  {% for r in resultados %}
-    <li>
-      <strong>{{ r.nombre }}:</strong> {{ r.coste }} € 
-      (<span>{{ r.km }} km</span>)
-    </li>
-  {% endfor %}
-</ul>
+<div class="resultados-card">
+    <h2>Resumen por persona</h2>
+    <div class="resultados-list">
+        {% for r in resultados %}
+        <div class="resultado-item">
+            <span>{{ r.nombre }}</span>
+            <div>
+                <strong>{{ r.coste }} €</strong> 
+                <small style="opacity: 0.6; margin-left: 10px;">({{ r.km }} km)</small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
 {% endif %}
 
 </body>
