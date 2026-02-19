@@ -165,3 +165,33 @@ button[type="button"]:hover {
     font-weight: 700;
     color: var(--primary);
 }
+
+.route-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.km-readonly {
+    background-color: #f1f5f9 !important; /* Gris suave para indicar que no se edita */
+    color: var(--primary) !important;
+    font-weight: bold;
+    cursor: not-allowed;
+}
+
+.status-text {
+    font-size: 0.8rem;
+    margin-top: -10px;
+    margin-bottom: 15px;
+    color: #10b981; /* Verde éxito */
+    font-style: italic;
+}
+
+/* Estilo para el panel de sugerencias de Google */
+.pac-container {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid #e2e8f0;
+    font-family: inherit;
+}

@@ -2,97 +2,85 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>AniWay</title>
+  <title>AniWay - Calculadora Inteligente</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="icon" href="{{ url_for('static', filename='aniway_favicon.ico') }}" type="image/x-icon">
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places"></script>
+  
   <script>
-  let gruposIda = 0;
-  let gruposVuelta = 0;
+    let gruposContador = { ida: 0, vuelta: 0 };
 
-  function agregarGrupo(tipo) {
-    let container;
-    let n;
+    function agregarGrupo(tipo) {
+        gruposContador[tipo]++;
+        const n = gruposContador[tipo];
+        const container = document.getElementById(`listaGrupos${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
 
-    if (tipo === 'ida') {
-      gruposIda++;
-      container = document.getElementById('listaGruposIda');
-      n = gruposIda;
-    } else {
-      gruposVuelta++;
-      container = document.getElementById('listaGruposVuelta');
-      n = gruposVuelta;
-    }
-
-    // Crear el div del grupo
-    const div = document.createElement('div');
-    div.className = 'grupo';
-    div.innerHTML = `
-        <h4>Grupo ${tipo} ${n}</h4>
-        <label>Amigos (separados por coma):</label>
-        <input type="text" name="${tipo}_amigos_${n}">
-        <label>Distancia recorrida (km):</label>
-        <input type="number" step="0.1" name="${tipo}_dist_${n}">
-    `;
-
-    // Añadir al contenedor sin borrar los existentes
-    container.appendChild(div);
-
-    // Actualizar el input oculto de total de grupos
-    if (tipo === 'ida') {
-      document.getElementById('total_grupos_ida').value = gruposIda;
-    } else {
-      document.getElementById('total_grupos_vuelta').value = gruposVuelta;
-    }
-  }
-  </script>
-
-</head>
-
-<body>
-
-<div class="logo-container">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="AniWay Logo">
-</div>
-
-<h1>Calculadora de gastos de viaje</h1>
-
-<form method="POST">
-
-  <h2>Costes</h2>
-  <label>Coste total del viaje (€):</label>
-  <input type="number" step="0.01" name="coste_total">
-
-  <h2>Grupos ida</h2>
-  <div id="listaGruposIda"></div>
-  <input type="hidden" id="total_grupos_ida" name="total_grupos_ida" value="0">
-  <button type="button" onclick="agregarGrupo('ida')">Añadir grupo de ida</button>
-
-  <h2>Grupos vuelta</h2>
-  <div id="listaGruposVuelta"></div>
-  <input type="hidden" id="total_grupos_vuelta" name="total_grupos_vuelta" value="0">
-  <button type="button" onclick="agregarGrupo('vuelta')">Añadir grupo de vuelta</button>
-
-  <br><br>
-  <button type="submit">Calcular</button>
-</form>
-
-{% if resultados %}
-<div class="resultados-card">
-    <h2>Resumen de gastos</h2>
-    <div class="resultados-list">
-        {% for r in resultados %}
-        <div class="resultado-item">
-            <span class="res-nombre">{{ r.nombre }}</span>
-            <div>
-                <span class="res-coste">{{ r.coste }} €</span>
-                <small style="color: var(--text-muted); margin-left: 8px;">{{ r.km }} km</small>
+        const div = document.createElement('div');
+        div.className = 'grupo';
+        div.innerHTML = `
+            <h4>Grupo ${tipo} ${n}</h4>
+            <label>Amigos (separados por coma):</label>
+            <input type="text" name="${tipo}_amigos_${n}" placeholder="Ej: Ana, Luis, Pedro" required>
+            
+            <div class="route-inputs">
+                <div>
+                    <label>Origen:</label>
+                    <input type="text" id="${tipo}_ori_${n}" placeholder="Punto de inicio" class="geo-input">
+                </div>
+                <div>
+                    <label>Destino:</label>
+                    <input type="text" id="${tipo}_dest_${n}" placeholder="Punto de llegada" class="geo-input">
+                </div>
             </div>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
 
-</body>
+            <label>Distancia calculada (km):</label>
+            <input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" readonly class="km-readonly">
+            <p id="${tipo}_status_${n}" class="status-text"></p>
+        `;
+        container.appendChild(div);
+
+        // 1. Activar Autocomplete en los nuevos inputs
+        initAutocomplete(`${tipo}_ori_${n}`, `${tipo}_dest_${n}`, `${tipo}_km_${n}`, `${tipo}_status_${n}`);
+        
+        // 2. Actualizar contadores ocultos para Flask
+        document.getElementById(`total_grupos_${tipo}`).value = n;
+    }
+
+    function initAutocomplete(idOri, idDest, idKm, idStatus) {
+        const oriInput = document.getElementById(idOri);
+        const destInput = document.getElementById(idDest);
+        
+        const options = { types: ['geocode', 'establishment'] };
+        const autoOri = new google.maps.places.Autocomplete(oriInput, options);
+        const autoDest = new google.maps.places.Autocomplete(destInput, options);
+
+        // Cuando cambie cualquiera de los dos, intentar calcular distancia
+        [autoOri, autoDest].forEach(auto => {
+            auto.addListener('place_changed', () => calcularDistanciaReal(oriInput.value, destInput.value, idKm, idStatus));
+        });
+    }
+
+    function calcularDistanciaReal(origen, destino, idKm, idStatus) {
+        if (!origen || !destino) return;
+
+        const service = new google.maps.DistanceMatrixService();
+        service.getDistanceMatrix({
+            origins: [origen],
+            destinations: [destino],
+            travelMode: 'DRIVING',
+            unitSystem: google.maps.UnitSystem.METRIC
+        }, (response, status) => {
+            if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
+                const distanciaMetros = response.rows[0].elements[0].distance.value;
+                const km = (distanciaMetros / 1000).toFixed(1);
+                document.getElementById(idKm).value = km;
+                document.getElementById(idStatus).innerText = `🚗 Ruta encontrada: ${km} km`;
+            } else {
+                document.getElementById(idStatus).innerText = "❌ No se pudo calcular la ruta por carretera.";
+            }
+        });
+    }
+  </script>
+</head>
+<body>
+    </body>
 </html>
-
