@@ -1,66 +1,113 @@
+/* 1. Variables globales y reset */
 :root {
     --primary: #6366f1;
     --primary-hover: #4f46e5;
-    --bg-body: #f8fafc;
-    --bg-card: #ffffff;
-    --text-main: #1e293b;
-    --text-muted: #64748b;
     --border: #e2e8f0;
+    --text-main: #1e293b;
 }
 
-body {
-    background-color: var(--bg-body);
-    font-family: 'Segoe UI', Roboto, sans-serif;
-    color: var(--text-main);
-    margin: 0; padding: 40px 20px;
-    display: flex; flex-direction: column; align-items: center;
-    min-height: 100vh;
+* { box-sizing: border-box; }
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden; /* Evita el scroll doble */
 }
 
-h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 30px; color: var(--text-main); }
+/* 2. Layout de pantalla dividida */
+#layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
 
-form {
-    background: var(--bg-card);
+/* 3. Panel lateral izquierdo (Formulario) */
+#sidebar {
+    width: 450px;
+    min-width: 450px;
+    height: 100%;
+    overflow-y: auto; /* Solo hace scroll el formulario */
+    padding: 30px;
+    background: white;
+    border-right: 1px solid var(--border);
+    box-shadow: 4px 0 15px rgba(0,0,0,0.05);
+    z-index: 10;
+}
+
+/* 4. Contenedor del mapa (Derecha) */
+#map-container {
+    flex-grow: 1; /* Ocupa todo el resto de la pantalla */
+    height: 100%;
+    background: #e5e7eb;
+}
+
+/* 5. Estilos de elementos internos */
+h1 { font-size: 1.8rem; margin-bottom: 20px; color: var(--text-main); }
+
+.grupo {
+    background: #f8fafc;
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 32px;
-    max-width: 550px; width: 100%;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
 }
-
-h2 { font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 24px; }
-
-label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px; }
 
 input {
-    width: 100%; box-sizing: border-box;
-    padding: 12px; border-radius: 8px;
-    border: 1px solid var(--border); margin-bottom: 15px;
-    font-size: 1rem;
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
 }
 
-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+/* Estilo para los inputs que hay que clicar */
+.geo-input {
+    cursor: pointer;
+    background: #fff;
+    border: 2px solid #e2e8f0;
+    transition: all 0.2s;
+}
 
-.route-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.geo-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #f5f7ff;
+}
 
+/* 6. Botones */
 button {
-    width: 100%; padding: 12px; border-radius: 8px; font-weight: 700;
-    cursor: pointer; transition: 0.2s; border: none;
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    margin-bottom: 10px;
 }
 
-button[type="button"] { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); margin-bottom: 10px; }
-button[type="button"]:hover { background: #e2e8f0; }
-
-.km-readonly { background: #f1f5f9; color: var(--primary); font-weight: 800; cursor: not-allowed; text-align: center; }
-
-.grupo { background: #fcfcfd; border: 1px solid var(--border); padding: 16px; border-radius: 12px; margin-bottom: 16px; }
-
-.status-text { font-size: 0.75rem; font-weight: 600; margin-top: -10px; margin-bottom: 15px; height: 1em; }
-
-.resultados-card {
-    background: white; border: 1px solid var(--border);
-    border-radius: 16px; padding: 24px; margin-top: 32px; width: 100%; max-width: 550px;
+button[type="button"] {
+    background: #f1f5f9;
+    color: var(--text-main);
 }
 
-.resultado-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
-.res-coste { color: var(--primary); font-weight: 700; }
+.btn-main {
+    background: var(--primary);
+    color: white;
+    margin-top: 20px;
+    font-size: 16px;
+}
+
+/* 7. Marcadores del mapa */
+.marker-ori { background: #6366f1; border-radius: 50%; border: 2px solid white; width: 15px !important; height: 15px !important; }
+.marker-dest { background: #ef4444; border-radius: 50%; border: 2px solid white; width: 15px !important; height: 15px !important; }
+
+/* 8. Adaptación a móviles */
+@media (max-width: 768px) {
+    #layout { flex-direction: column-reverse; }
+    #sidebar { width: 100%; height: 60%; min-width: 100%; }
+    #map-container { height: 40%; width: 100%; }
+}
