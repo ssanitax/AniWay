@@ -7,121 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-
-    <script>
-        let map, markerOri, markerDest;
-        let seleccionando = null;
-        let gruposContador = { ida: 0, vuelta: 0 };
-
-        function initMap() {
-            map = L.map('map-container').setView([40.4167, -3.7037], 6);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-            map.on('click', function(e) {
-                if (!seleccionando) return alert("Selecciona primero un campo Origen o Destino.");
-                actualizarPunto(e.latlng.lat, e.latlng.lng);
-            });
-        }
-
-        function setSeleccion(tipo, n, campo) {
-            seleccionando = { tipo, n, campo };
-            document.querySelectorAll('.geo-input').forEach(i => i.classList.remove('active'));
-            document.getElementById(`${tipo}_${campo}_${n}`).classList.add('active');
-        }
-
-        async function buscarPorTexto(tipo, n, campo) {
-            const input = document.getElementById(`${tipo}_${campo}_${n}`);
-            const direccion = input.value;
-            if (direccion.length < 3) return;
-
-            setSeleccion(tipo, n, campo);
-            
-            const geocoder = L.Control.Geocoder.nominatim();
-            geocoder.geocode(direccion, (results) => {
-                if (results && results.length > 0) {
-                    const { lat, lng } = results[0].center;
-                    map.flyTo([lat, lng], 13);
-                    actualizarPunto(lat, lng, results[0].name);
-                } else {
-                    alert("Lugar no encontrado. Intenta añadir la ciudad o país.");
-                }
-            });
-        }
-
-        async function actualizarPunto(lat, lng, nombreForzado = null) {
-            const { tipo, n, campo } = seleccionando;
-            const input = document.getElementById(`${tipo}_${campo}_${n}`);
-            
-            if (nombreForzado) {
-                input.value = nombreForzado;
-            } else {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-                const data = await res.json();
-                input.value = data.display_name.split(',')[0] + (data.address.city ? ", " + data.address.city : "");
-            }
-            
-            input.dataset.lat = lat;
-            input.dataset.lng = lng;
-
-            if (campo === 'ori') {
-                if (markerOri) markerOri.setLatLng([lat, lng]);
-                else markerOri = L.marker([lat, lng]).addTo(map);
-            } else {
-                if (markerDest) markerDest.setLatLng([lat, lng]);
-                else markerDest = L.marker([lat, lng]).addTo(map);
-            }
-
-            calcularRutaOSRM(tipo, n);
-        }
-
-        async function calcularRutaOSRM(tipo, n) {
-            const ori = document.getElementById(`${tipo}_ori_${n}`);
-            const dest = document.getElementById(`${tipo}_dest_${n}`);
-            if (ori.dataset.lat && dest.dataset.lat) {
-                const url = `https://router.project-osrm.org/route/v1/driving/${ori.dataset.lng},${ori.dataset.lat};${dest.dataset.lng},${dest.dataset.lat}?overview=false`;
-                const res = await fetch(url);
-                const data = await res.json();
-                if (data.routes && data.routes.length > 0) {
-                    const km = (data.routes[0].distance / 1000).toFixed(1);
-                    document.getElementById(`${tipo}_km_${n}`).value = km;
-                    document.getElementById(`${tipo}_status_${n}`).innerText = `🚗 ${km} km por carretera`;
-                }
-            }
-        }
-
-        function agregarGrupo(tipo) {
-            gruposContador[tipo]++;
-            const n = gruposContador[tipo];
-            const container = document.getElementById(`listaGrupos${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
-            const div = document.createElement('div');
-            div.className = 'grupo';
-            div.innerHTML = `
-                <h4>Grupo ${tipo} ${n}</h4>
-                <input type="text" name="${tipo}_amigos_${n}" placeholder="Amigos (Ana, Luis...)" required>
-                
-                <div class="input-search-group">
-                    <input type="text" id="${tipo}_ori_${n}" class="geo-input" placeholder="📍 Origen" onfocus="setSeleccion('${tipo}', ${n}, 'ori')">
-                    <button type="button" class="btn-search" onclick="buscarPorTexto('${tipo}', ${n}, 'ori')">🔍</button>
-                </div>
-
-                <div class="input-search-group">
-                    <input type="text" id="${tipo}_dest_${n}" class="geo-input" placeholder="🏁 Destino" onfocus="setSeleccion('${tipo}', ${n}, 'dest')">
-                    <button type="button" class="btn-search" onclick="buscarPorTexto('${tipo}', ${n}, 'dest')">🔍</button>
-                </div>
-
-                <input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" readonly class="km-readonly" placeholder="KM">
-                <p id="${tipo}_status_${n}" class="status-text"></p>
-            `;
-            container.appendChild(div);
-            document.getElementById(`total_grupos_${tipo}`).value = n;
-        }
-
-        window.onload = initMap;
-    </script>
 </head>
 <body>
     <div id="layout">
@@ -158,5 +44,127 @@
         </div>
         <div id="map-container"></div>
     </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <script>
+        let map, markerOri, markerDest;
+        let seleccionando = null;
+        let gruposContador = { ida: 0, vuelta: 0 };
+
+        // Inicialización segura del mapa
+        function initMap() {
+            if (map) return; 
+            map = L.map('map-container').setView([40.4167, -3.7037], 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            map.on('click', function(e) {
+                if (!seleccionando) return alert("Selecciona primero un campo Origen o Destino.");
+                actualizarPunto(e.latlng.lat, e.latlng.lng);
+            });
+        }
+
+        function setSeleccion(tipo, n, campo) {
+            seleccionando = { tipo, n, campo };
+            document.querySelectorAll('.geo-input').forEach(i => i.classList.remove('active'));
+            document.getElementById(`${tipo}_${campo}_${n}`).classList.add('active');
+        }
+
+        async function buscarPorTexto(tipo, n, campo) {
+            const input = document.getElementById(`${tipo}_${campo}_${n}`);
+            const direccion = input.value;
+            if (direccion.length < 3) return;
+
+            setSeleccion(tipo, n, campo);
+            
+            const geocoder = L.Control.Geocoder.nominatim();
+            geocoder.geocode(direccion, (results) => {
+                if (results && results.length > 0) {
+                    const { lat, lng } = results[0].center;
+                    map.flyTo([lat, lng], 13);
+                    actualizarPunto(lat, lng, results[0].name);
+                } else {
+                    alert("No se encontró el lugar. Intenta añadir ciudad y país.");
+                }
+            });
+        }
+
+        async function actualizarPunto(lat, lng, nombreForzado = null) {
+            const { tipo, n, campo } = seleccionando;
+            const input = document.getElementById(`${tipo}_${campo}_${n}`);
+            
+            if (nombreForzado) {
+                input.value = nombreForzado;
+            } else {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const data = await res.json();
+                    input.value = data.display_name.split(',')[0] + (data.address.city ? ", " + data.address.city : "");
+                } catch (e) {
+                    input.value = lat.toFixed(4) + ", " + lng.toFixed(4);
+                }
+            }
+            
+            input.dataset.lat = lat;
+            input.dataset.lng = lng;
+
+            if (campo === 'ori') {
+                if (markerOri) markerOri.setLatLng([lat, lng]);
+                else markerOri = L.marker([lat, lng]).addTo(map);
+            } else {
+                if (markerDest) markerDest.setLatLng([lat, lng]);
+                else markerDest = L.marker([lat, lng]).addTo(map);
+            }
+
+            calcularRutaOSRM(tipo, n);
+        }
+
+        async function calcularRutaOSRM(tipo, n) {
+            const ori = document.getElementById(`${tipo}_ori_${n}`);
+            const dest = document.getElementById(`${tipo}_dest_${n}`);
+            if (ori.dataset.lat && dest.dataset.lat) {
+                const url = `https://router.project-osrm.org/route/v1/driving/${ori.dataset.lng},${ori.dataset.lat};${dest.dataset.lng},${dest.dataset.lat}?overview=false`;
+                try {
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    if (data.routes && data.routes.length > 0) {
+                        const km = (data.routes[0].distance / 1000).toFixed(1);
+                        document.getElementById(`${tipo}_km_${n}`).value = km;
+                        document.getElementById(`${tipo}_status_${n}`).innerText = `✅ ${km} km`;
+                    }
+                } catch (e) { console.error("Error en OSRM", e); }
+            }
+        }
+
+        function agregarGrupo(tipo) {
+            gruposContador[tipo]++;
+            const n = gruposContador[tipo];
+            const container = document.getElementById(`listaGrupos${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+            const div = document.createElement('div');
+            div.className = 'grupo';
+            div.innerHTML = `
+                <h4>Grupo ${tipo} ${n}</h4>
+                <input type="text" name="${tipo}_amigos_${n}" placeholder="Amigos (Ana, Luis...)" required>
+                <div class="input-search-group">
+                    <input type="text" id="${tipo}_ori_${n}" class="geo-input" placeholder="📍 Origen" onfocus="setSeleccion('${tipo}', ${n}, 'ori')">
+                    <button type="button" class="btn-search" onclick="buscarPorTexto('${tipo}', ${n}, 'ori')">🔍</button>
+                </div>
+                <div class="input-search-group">
+                    <input type="text" id="${tipo}_dest_${n}" class="geo-input" placeholder="🏁 Destino" onfocus="setSeleccion('${tipo}', ${n}, 'dest')">
+                    <button type="button" class="btn-search" onclick="buscarPorTexto('${tipo}', ${n}, 'dest')">🔍</button>
+                </div>
+                <input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" readonly class="km-readonly" placeholder="KM">
+                <p id="${tipo}_status_${n}" class="status-text"></p>
+            `;
+            container.appendChild(div);
+            document.getElementById(`total_grupos_${tipo}`).value = n;
+        }
+
+        // Ejecutar al cargar la ventana
+        window.onload = initMap;
+    </script>
 </body>
 </html>
