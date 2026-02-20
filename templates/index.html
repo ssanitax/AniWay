@@ -1,85 +1,100 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>AniWay - Calculadora Inteligente</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places"></script>
-  
-  <script>
-    let gruposContador = { ida: 0, vuelta: 0 };
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AniWay - Calculadora Libre</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
-    function agregarGrupo(tipo) {
-        gruposContador[tipo]++;
-        const n = gruposContador[tipo];
-        const container = document.getElementById(`listaGrupos${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+    <script>
+        let gruposContador = { ida: 0, vuelta: 0 };
 
-        const div = document.createElement('div');
-        div.className = 'grupo';
-        div.innerHTML = `
-            <h4>Grupo ${tipo} ${n}</h4>
-            <label>Amigos (separados por coma):</label>
-            <input type="text" name="${tipo}_amigos_${n}" placeholder="Ej: Ana, Luis, Pedro" required>
-            
-            <div class="route-inputs">
-                <div>
-                    <label>Origen:</label>
-                    <input type="text" id="${tipo}_ori_${n}" placeholder="Punto de inicio" class="geo-input">
+        function agregarGrupo(tipo) {
+            gruposContador[tipo]++;
+            const n = gruposContador[tipo];
+            const container = document.getElementById(`listaGrupos${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+
+            const div = document.createElement('div');
+            div.className = 'grupo';
+            div.innerHTML = `
+                <h4>Grupo ${tipo} ${n}</h4>
+                <label>Amigos (separados por coma):</label>
+                <input type="text" name="${tipo}_amigos_${n}" placeholder="Ej: Ana, Luis" required>
+                
+                <div class="route-inputs">
+                    <div>
+                        <label>Origen:</label>
+                        <input type="text" id="${tipo}_ori_${n}" placeholder="Ciudad de inicio" onchange="buscarRuta('${tipo}', ${n})">
+                    </div>
+                    <div>
+                        <label>Destino:</label>
+                        <input type="text" id="${tipo}_dest_${n}" placeholder="Ciudad de llegada" onchange="buscarRuta('${tipo}', ${n})">
+                    </div>
                 </div>
-                <div>
-                    <label>Destino:</label>
-                    <input type="text" id="${tipo}_dest_${n}" placeholder="Punto de llegada" class="geo-input">
-                </div>
-            </div>
 
-            <label>Distancia calculada (km):</label>
-            <input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" readonly class="km-readonly">
-            <p id="${tipo}_status_${n}" class="status-text"></p>
-        `;
-        container.appendChild(div);
+                <label>Distancia por carretera (km):</label>
+                <input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" readonly class="km-readonly">
+                <p id="${tipo}_status_${n}" class="status-text"></p>
+            `;
+            container.appendChild(div);
+            document.getElementById(`total_grupos_${tipo}`).value = n;
+        }
 
-        // 1. Activar Autocomplete en los nuevos inputs
-        initAutocomplete(`${tipo}_ori_${n}`, `${tipo}_dest_${n}`, `${tipo}_km_${n}`, `${tipo}_status_${n}`);
-        
-        // 2. Actualizar contadores ocultos para Flask
-        document.getElementById(`total_grupos_${tipo}`).value = n;
-    }
+        async function obtenerCoordenadas(direccion) {
+            return new Promise((resolve) => {
+                const geocoder = L.Control.Geocoder.nominatim();
+                geocoder.geocode(direccion, (results) => {
+                    if (results && results.length > 0) {
+                        resolve(results[0].center); // Devuelve {lat, lng}
+                    } else {
+                        resolve(null);
+                    }
+                });
+            });
+        }
 
-    function initAutocomplete(idOri, idDest, idKm, idStatus) {
-        const oriInput = document.getElementById(idOri);
-        const destInput = document.getElementById(idDest);
-        
-        const options = { types: ['geocode', 'establishment'] };
-        const autoOri = new google.maps.places.Autocomplete(oriInput, options);
-        const autoDest = new google.maps.places.Autocomplete(destInput, options);
+        async function buscarRuta(tipo, n) {
+            const oriVal = document.getElementById(`${tipo}_ori_${n}`).value;
+            const destVal = document.getElementById(`${tipo}_dest_${n}`).value;
+            const status = document.getElementById(`${tipo}_status_${n}`);
+            const kmInput = document.getElementById(`${tipo}_km_${n}`);
 
-        // Cuando cambie cualquiera de los dos, intentar calcular distancia
-        [autoOri, autoDest].forEach(auto => {
-            auto.addListener('place_changed', () => calcularDistanciaReal(oriInput.value, destInput.value, idKm, idStatus));
-        });
-    }
+            if (oriVal.length > 3 && destVal.length > 3) {
+                status.innerText = "⏳ Calculando ruta...";
+                
+                const coordOri = await obtenerCoordenadas(oriVal);
+                const coordDest = await obtenerCoordenadas(destVal);
 
-    function calcularDistanciaReal(origen, destino, idKm, idStatus) {
-        if (!origen || !destino) return;
-
-        const service = new google.maps.DistanceMatrixService();
-        service.getDistanceMatrix({
-            origins: [origen],
-            destinations: [destino],
-            travelMode: 'DRIVING',
-            unitSystem: google.maps.UnitSystem.METRIC
-        }, (response, status) => {
-            if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
-                const distanciaMetros = response.rows[0].elements[0].distance.value;
-                const km = (distanciaMetros / 1000).toFixed(1);
-                document.getElementById(idKm).value = km;
-                document.getElementById(idStatus).innerText = `🚗 Ruta encontrada: ${km} km`;
-            } else {
-                document.getElementById(idStatus).innerText = "❌ No se pudo calcular la ruta por carretera.";
+                if (coordOri && coordDest) {
+                    // Llamada a OSRM (Servidor de rutas gratuito)
+                    const url = `https://router.project-osrm.org/route/v1/driving/${coordOri.lng},${coordOri.lat};${coordDest.lng},${coordDest.lat}?overview=false`;
+                    
+                    try {
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        
+                        if (data.routes && data.routes.length > 0) {
+                            const distanciaKm = (data.routes[0].distance / 1000).toFixed(1);
+                            kmInput.value = distanciaKm;
+                            status.innerText = `✅ Carretera: ${distanciaKm} km`;
+                        } else {
+                            status.innerText = "❌ No se encontró ruta terrestre.";
+                        }
+                    } catch (e) {
+                        status.innerText = "❌ Error al conectar con el servidor de rutas.";
+                    }
+                } else {
+                    status.innerText = "🔍 Buscando direcciones...";
+                }
             }
-        });
-    }
-  </script>
+        }
+    </script>
 </head>
 <body>
 
