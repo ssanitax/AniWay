@@ -1,265 +1,66 @@
 :root {
-    --primary: #6366f1;       /* Indigo moderno */
+    --primary: #6366f1;
     --primary-hover: #4f46e5;
-    --bg-body: #f8fafc;       /* Gris casi blanco */
+    --bg-body: #f8fafc;
     --bg-card: #ffffff;
-    --text-main: #1e293b;     /* Azul grisáceo oscuro para lectura */
+    --text-main: #1e293b;
     --text-muted: #64748b;
     --border: #e2e8f0;
 }
 
 body {
     background-color: var(--bg-body);
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Segoe UI', Roboto, sans-serif;
     color: var(--text-main);
-    margin: 0;
-    padding: 40px 20px;
-    line-height: 1.5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    margin: 0; padding: 40px 20px;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh;
 }
 
-.logo-container img {
-    width: 100px;
-    border-radius: 24px;
-    margin-bottom: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-h1 {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--text-main);
-    margin-bottom: 30px;
-    letter-spacing: -0.5px;
-}
+h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 30px; color: var(--text-main); }
 
 form {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 32px;
-    max-width: 500px;
-    width: 100%;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 
-                0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    max-width: 550px; width: 100%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
 }
 
-h2 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-top: 24px;
-    margin-bottom: 12px;
-    color: var(--text-main);
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 8px;
-}
+h2 { font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-top: 24px; }
 
-label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 500;
-    margin-bottom: 6px;
-    color: var(--text-muted);
-}
+label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px; }
 
-input[type="number"],
-input[type="text"] {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background-color: #ffffff;
+input {
+    width: 100%; box-sizing: border-box;
+    padding: 12px; border-radius: 8px;
+    border: 1px solid var(--border); margin-bottom: 15px;
     font-size: 1rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-    margin-bottom: 16px;
 }
 
-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-}
+input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+
+.route-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
 button {
-    width: 100%;
-    padding: 12px;
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
+    width: 100%; padding: 12px; border-radius: 8px; font-weight: 700;
+    cursor: pointer; transition: 0.2s; border: none;
 }
 
-/* Botón principal */
-button[type="submit"] {
-    background-color: var(--primary);
-    color: white;
-    border: none;
-    margin-top: 10px;
-}
+button[type="button"] { background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); margin-bottom: 10px; }
+button[type="button"]:hover { background: #e2e8f0; }
 
-button[type="submit"]:hover {
-    background-color: var(--primary-hover);
-    transform: translateY(-1px);
-}
+.km-readonly { background: #f1f5f9; color: var(--primary); font-weight: 800; cursor: not-allowed; text-align: center; }
 
-/* Botón secundario (Añadir grupo) */
-button[type="button"] {
-    background-color: #f1f5f9;
-    color: var(--text-main);
-    border: 1px solid var(--border);
-    margin-bottom: 10px;
-}
+.grupo { background: #fcfcfd; border: 1px solid var(--border); padding: 16px; border-radius: 12px; margin-bottom: 16px; }
 
-button[type="button"]:hover {
-    background-color: #e2e8f0;
-}
-
-.grupo {
-    background-color: #f8fafc;
-    border: 1px solid var(--border);
-    padding: 16px;
-    margin-bottom: 16px;
-    border-radius: 10px;
-}
-
-.grupo h4 {
-    margin: 0 0 12px 0;
-    font-size: 0.9rem;
-    color: var(--primary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+.status-text { font-size: 0.75rem; font-weight: 600; margin-top: -10px; margin-bottom: 15px; height: 1em; }
 
 .resultados-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    max-width: 500px;
-    width: 100%;
-    margin-top: 30px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    background: white; border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; margin-top: 32px; width: 100%; max-width: 550px;
 }
 
-.resultado-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.resultado-item:last-child {
-    border-bottom: none;
-}
-
-.res-nombre {
-    font-weight: 500;
-}
-
-.res-coste {
-    font-weight: 700;
-    color: var(--primary);
-}
-
-.route-inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-bottom: 10px;
-}
-
-.km-readonly {
-    background-color: #f1f5f9 !important; /* Gris suave para indicar que no se edita */
-    color: var(--primary) !important;
-    font-weight: bold;
-    cursor: not-allowed;
-}
-
-.status-text {
-    font-size: 0.8rem;
-    margin-top: -10px;
-    margin-bottom: 15px;
-    color: #10b981; /* Verde éxito */
-    font-style: italic;
-}
-
-/* Estilo para el panel de sugerencias de Google */
-.pac-container {
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    border: 1px solid #e2e8f0;
-    font-family: inherit;
-}
-
-/* 1. Control de visualización del Body */
-body {
-    min-height: 100vh;
-    justify-content: flex-start; /* Evita que el contenido salte al centro */
-}
-
-/* 2. Mejoras en el contenedor de rutas (Origen/Destino) */
-.route-inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 8px;
-}
-
-/* Ajuste para móviles: en pantallas pequeñas, uno debajo del otro */
-@media (max-width: 480px) {
-    .route-inputs {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* 3. Estilo para los inputs de Google (Autocompletado) */
-.geo-input {
-    background-image: url('https://www.gstatic.com/images/icons/material/system/2x/place_gm_blue_18dp.png');
-    background-repeat: no-repeat;
-    background-position: 8px center;
-    background-size: 16px;
-    padding-left: 30px !important; /* Espacio para el icono de pin */
-}
-
-/* 4. Estilo de los campos de KM (Solo lectura) */
-.km-readonly {
-    background-color: #f1f5f9 !important;
-    border-style: dashed !important;
-    color: var(--primary) !important;
-    font-weight: 700;
-    cursor: not-allowed;
-    text-align: center;
-}
-
-/* 5. Feedback visual de carga/estado */
-.status-text {
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-top: -12px;
-    margin-bottom: 16px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    display: inline-block;
-}
-
-/* 6. Animación sutil para la aparición de nuevos grupos */
-.grupo {
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* 7. Ajuste del Logo para que no sea gigante */
-.logo-container img {
-    max-height: 80px;
-    width: auto;
-    object-fit: contain;
-}
+.resultado-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.res-coste { color: var(--primary); font-weight: 700; }

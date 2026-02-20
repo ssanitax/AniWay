@@ -4,6 +4,7 @@ import os
 app = Flask(__name__)
 
 def calcular_trayecto(grupos, coste_total):
+    """Calcula el coste proporcional por persona basado en la distancia total."""
     grupos_validos = [g for g in grupos if g["amigos"] and g["dist"] > 0]
     if not grupos_validos:
         return []
@@ -12,8 +13,11 @@ def calcular_trayecto(grupos, coste_total):
     resultados = []
 
     for g in grupos_validos:
+        # El coste del grupo es proporcional a su distancia sobre el total
         coste_grupo = (g["dist"] / total_dist) * coste_total
+        # Se divide entre los amigos que iban en ese tramo
         coste_individual = coste_grupo / len(g["amigos"])
+        
         for amigo in g["amigos"]:
             resultados.append({
                 "nombre": amigo,
@@ -66,4 +70,4 @@ def index():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=False)
