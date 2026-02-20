@@ -111,3 +111,49 @@ button[type="button"] {
     #sidebar { width: 100%; height: 60%; min-width: 100%; }
     #map-container { height: 40%; width: 100%; }
 }
+
+/* ... (manten lo anterior y añade/modifica esto) ... */
+
+.input-search-group {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.input-search-group input {
+    margin-bottom: 0; /* Quita el margen para que alinee con el botón */
+}
+
+.btn-search {
+    width: 45px;
+    height: 45px;
+    padding: 0;
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.btn-search:hover {
+    background: #e2e8f0;
+}
+
+.geo-input.active {
+    border-color: var(--primary);
+    background: #f5f7ff;
+}
+
+.btn-add {
+    background: #e0e7ff;
+    color: var(--primary);
+    font-size: 14px;
+}
+
+h3 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-top: 25px;
+}

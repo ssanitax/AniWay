@@ -3,61 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AniWay - Mapa Interactivo</title>
+    <title>AniWay - Mapa + Búsqueda</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
     <script>
         let map, markerOri, markerDest;
-        let seleccionando = null; // Guarda qué input estamos rellenando
+        let seleccionando = null;
         let gruposContador = { ida: 0, vuelta: 0 };
 
-        // Inicializar Mapa
         function initMap() {
-            map = L.map('map-container').setView([40.4167, -3.7037], 6); // Centrado en España
+            map = L.map('map-container').setView([40.4167, -3.7037], 6);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            map.on('click', async function(e) {
-                if (!seleccionando) {
-                    alert("Primero selecciona el campo Origen o Destino que quieres marcar.");
-                    return;
-                }
-                const { lat, lng } = e.latlng;
-                actualizarPunto(lat, lng);
+            map.on('click', function(e) {
+                if (!seleccionando) return alert("Selecciona un campo Origen o Destino.");
+                actualizarPunto(e.latlng.lat, e.latlng.lng);
             });
         }
 
         function setSeleccion(tipo, n, campo) {
             seleccionando = { tipo, n, campo };
-            // Resaltar visualmente el input activo
-            document.querySelectorAll('.geo-input').forEach(i => i.style.borderColor = '#e2e8f0');
-            document.getElementById(`${tipo}_${campo}_${n}`).style.borderColor = 'var(--primary)';
+            document.querySelectorAll('.geo-input').forEach(i => i.classList.remove('active'));
+            document.getElementById(`${tipo}_${campo}_${n}`).classList.add('active');
         }
 
-        async function actualizarPunto(lat, lng) {
+        async function buscarPorTexto(tipo, n, campo) {
+            const input = document.getElementById(`${tipo}_${campo}_${n}`);
+            const direccion = input.value;
+            if (direccion.length < 3) return;
+
+            setSeleccion(tipo, n, campo); // Asegura que el resultado vaya a este input
+            
+            const geocoder = L.Control.Geocoder.nominatim();
+            geocoder.geocode(direccion, (results) => {
+                if (results && results.length > 0) {
+                    const { lat, lng } = results[0].center;
+                    map.setView([lat, lng], 13);
+                    actualizarPunto(lat, lng, results[0].name);
+                } else {
+                    alert("No se encontró el lugar. Intenta ser más específico.");
+                }
+            });
+        }
+
+        async function actualizarPunto(lat, lng, nombreForzado = null) {
             const { tipo, n, campo } = seleccionando;
             const input = document.getElementById(`${tipo}_${campo}_${n}`);
             
-            // Reverse Geocoding: De coordenadas a nombre de ciudad
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-            const data = await res.json();
-            input.value = data.display_name.split(',')[0] + (data.address.city ? ", " + data.address.city : "");
+            if (nombreForzado) {
+                input.value = nombreForzado;
+            } else {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                const data = await res.json();
+                input.value = data.display_name.split(',')[0] + (data.address.city ? ", " + data.address.city : "");
+            }
             
-            // Guardar coordenadas ocultas en el input para el cálculo
             input.dataset.lat = lat;
             input.dataset.lng = lng;
 
-            // Dibujar marcadores
+            // Gestionar marcadores
             if (campo === 'ori') {
                 if (markerOri) markerOri.setLatLng([lat, lng]);
-                else markerOri = L.marker([lat, lng], {icon: L.divIcon({className: 'marker-ori'})}).addTo(map);
+                else markerOri = L.marker([lat, lng]).addTo(map);
             } else {
                 if (markerDest) markerDest.setLatLng([lat, lng]);
-                else markerDest = L.marker([lat, lng], {icon: L.divIcon({className: 'marker-dest'})}).addTo(map);
+                else markerDest = L.marker([lat, lng]).addTo(map);
             }
 
             calcularRutaOSRM(tipo, n);
@@ -66,16 +80,14 @@
         async function calcularRutaOSRM(tipo, n) {
             const ori = document.getElementById(`${tipo}_ori_${n}`);
             const dest = document.getElementById(`${tipo}_dest_${n}`);
-            
             if (ori.dataset.lat && dest.dataset.lat) {
-                const url = `https://router.project-osrm.org/route/v1/driving/${ori.dataset.lng},${ori.dataset.lat};${dest.dataset.lng},${dest.dataset.lat}?overview=full&geometries=geojson`;
+                const url = `https://router.project-osrm.org/route/v1/driving/${ori.dataset.lng},${ori.dataset.lat};${dest.dataset.lng},${dest.dataset.lat}?overview=false`;
                 const res = await fetch(url);
                 const data = await res.json();
-                
                 if (data.routes && data.routes.length > 0) {
                     const km = (data.routes[0].distance / 1000).toFixed(1);
                     document.getElementById(`${tipo}_km_${n}`).value = km;
-                    document.getElementById(`${tipo}_status_${n}`).innerText = `✅ ${km} km por carretera`;
+                    document.getElementById(`${tipo}_status_${n}`).innerText = `🚗 ${km} km`;
                 }
             }
         }
@@ -88,12 +100,19 @@
             div.className = 'grupo';
             div.innerHTML = `
                 <h4>Grupo ${tipo} ${n}</h4>
-                <input type="text" name="${tipo}_amigos_${n}" placeholder="Amigos: Ana, Pepe..." required>
-                <div class="route-inputs">
-                    <input type="text" id="${tipo}_ori_${n}" class="geo-input" placeholder="📍 Origen" onfocus="setSeleccion('${tipo}', ${n}, 'ori')" readonly>
-                    <input type="text" id="${tipo}_dest_${n}" class="geo-input" placeholder="🏁 Destino" onfocus="setSeleccion('${tipo}', ${n}, 'dest')" readonly>
+                <input type="text" name="${tipo}_amigos_${n}" placeholder="Amigos (Ana, Luis...)" required>
+                
+                <div class="input-search-group">
+                    <input type="text" id="${tipo}_ori_${n}" class="geo-input" placeholder="📍 Origen" onfocus="setSeleccion('${tipo}', ${n}, 'ori')">
+                    <button type="button" class="btn-search" onclick="buscarPorTexto('${tipo}', ${n}, 'ori')">🔍</button>
                 </div>
-                <input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" readonly class="km-readonly" placeholder="KM">
+
+                <div class="input-search-group">
+                    <input type="text" id="${tipo}_dest_${n}" class="geo-input" placeholder="🏁 Destino" onfocus="setSeleccion('${tipo}', ${n}, 'dest')">
+                    <button type="button" class="btn-search" onclick="buscarPorTexto('${tipo}', ${n}, 'dest')">🔍</button>
+                </div>
+
+                <input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" readonly class="km-readonly" placeholder="0.0 km">
                 <p id="${tipo}_status_${n}" class="status-text"></p>
             `;
             container.appendChild(div);
@@ -108,22 +127,25 @@
         <div id="sidebar">
             <h1>AniWay</h1>
             <form method="POST">
-                <label>Coste Total (€)</label>
-                <input type="number" step="0.01" name="coste_total" required>
+                <label>Coste Total del viaje (€)</label>
+                <input type="number" step="0.01" name="coste_total" required placeholder="Ej: 50.40">
                 
+                <h3>Trayectos Ida</h3>
                 <div id="listaGruposIda"></div>
-                <button type="button" onclick="agregarGrupo('ida')">+ Grupo Ida</button>
+                <button type="button" class="btn-add" onclick="agregarGrupo('ida')">+ Añadir Grupo Ida</button>
                 <input type="hidden" id="total_grupos_ida" name="total_grupos_ida" value="0">
 
+                <h3>Trayectos Vuelta</h3>
                 <div id="listaGruposVuelta"></div>
-                <button type="button" onclick="agregarGrupo('vuelta')">+ Grupo Vuelta</button>
+                <button type="button" class="btn-add" onclick="agregarGrupo('vuelta')">+ Añadir Grupo Vuelta</button>
                 <input type="hidden" id="total_grupos_vuelta" name="total_grupos_vuelta" value="0">
 
-                <button type="submit" class="btn-main">Calcular Reparto</button>
+                <button type="submit" class="btn-main">CALCULAR REPARTO</button>
             </form>
 
             {% if resultados %}
             <div class="resultados-card">
+                <h2>Resumen</h2>
                 {% for r in resultados %}
                 <div class="resultado-item">
                     <span>{{ r.nombre }}</span>
