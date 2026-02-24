@@ -3,80 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AniWay - Autocompletado Total</title>
+    <title>AniWay - Rave Calculator</title>
+    
+    <link rel="shortcut icon" href="{{ url_for('static', filename='aniway_favicon.ico') }}" type="image/x-icon">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <script src="https://unpkg.com/leaflet-geosearch@3.8.0/dist/bundle.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-geosearch@3.8.0/dist/geosearch.css" />
-
-    <style>
-        :root { --primary: #6366f1; --border: #e2e8f0; --text: #1e293b; }
-        * { box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; height: 100vh; font-family: sans-serif; overflow: hidden; }
-        
-        #layout { display: flex; height: 100vh; }
-        
-        #sidebar { 
-            width: 400px; min-width: 400px; padding: 25px; 
-            background: white; border-right: 1px solid var(--border);
-            overflow-y: auto; z-index: 100;
-        }
-
-        #map-container { flex-grow: 1; height: 100%; background: #ddd; }
-
-        .grupo { background: #f8fafc; border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 15px; }
-        
-        .search-box { position: relative; margin-bottom: 10px; }
-        input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
-        input.active { border: 2px solid var(--primary); background: #f5f7ff; }
-
-        /* Sugerencias desplegables */
-        .autocomplete-results {
-            position: absolute; top: 42px; left: 0; right: 0;
-            background: white; border: 1px solid var(--border);
-            border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            max-height: 200px; overflow-y: auto;
-        }
-        .result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 13px; }
-        .result-item:hover { background: #f1f5f9; color: var(--primary); }
-
-        .km-readonly { background: #f1f5f9; font-weight: bold; text-align: center; color: var(--primary); }
-        .btn-main { background: var(--primary); color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-add { background: #eef2ff; color: var(--primary); border: none; padding: 10px; width: 100%; border-radius: 8px; cursor: pointer; margin-bottom: 10px; }
-        
-        @media (max-width: 768px) { #layout { flex-direction: column-reverse; } #sidebar { width: 100%; height: 50%; } #map-container { height: 50%; } }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
 <div id="layout">
     <div id="sidebar">
-        <h1>AniWay</h1>
+        <div class="header-container">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="neon-logo">
+            <h1>AniWay</h1>
+        </div>
+
         <form method="POST">
-            <label>Coste Total (€)</label>
-            <input type="number" step="0.01" name="coste_total" placeholder="0.00" required>
+            <label class="main-label">DINERO TOTAL VIAJE (€)</label>
+            <input type="number" step="0.01" name="coste_total" class="main-input" placeholder="0.00" required>
             
-            <h3>Ida</h3>
-            <div id="listaGruposIda"></div>
-            <button type="button" class="btn-add" onclick="agregarGrupo('ida')">+ Grupo Ida</button>
-            <input type="hidden" id="total_grupos_ida" name="total_grupos_ida" value="0">
-
-            <h3>Vuelta</h3>
-            <div id="listaGruposVuelta"></div>
-            <button type="button" class="btn-add" onclick="agregarGrupo('vuelta')">+ Grupo Vuelta</button>
-            <input type="hidden" id="total_grupos_vuelta" name="total_grupos_vuelta" value="0">
-
-            <button type="submit" class="btn-main">CALCULAR</button>
+            <h3 class="section-title">Ruta y Pasajeros</h3>
+            <div id="listaTrayectos"></div>
+            
+            <input type="hidden" id="total_ida" name="total_grupos_ida" value="0">
+            <input type="hidden" id="total_vuelta" name="total_grupos_vuelta" value="0">
+            
+            <button type="button" class="btn btn-add" onclick="crearTramo('ida')">+ AÑADIR TRAMO</button>
+            <button type="submit" class="btn btn-submit">CALCULAR REPARTO</button>
         </form>
 
         {% if resultados %}
-        <div style="margin-top:20px; border-top: 2px solid var(--primary); padding-top:10px;">
-            <h4>Resumen</h4>
+        <div class="results-container">
+            <h4 class="results-title">RESULTADOS:</h4>
             {% for r in resultados %}
-            <div style="display:flex; justify-content: space-between; padding: 5px 0;">
-                <span>{{ r.nombre }}</span>
+            <div class="result-row">
+                <span>{{ r.nombre }}</span> 
                 <strong>{{ r.coste }} €</strong>
             </div>
             {% endfor %}
@@ -86,119 +48,122 @@
     <div id="map-container"></div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    let map, markerOri, markerDest, seleccionando = null;
-    let gruposContador = { ida: 0, vuelta: 0 };
-    const provider = new window.GeoSearch.OpenStreetMapProvider();
+    let map, markerOri, markerDest, activo = null;
+    let count = 0;
 
-    function initMap() {
-        map = L.map('map-container').setView([40.41, -3.70], 6);
+    function init() {
+        map = L.map('map-container', { zoomControl: false }).setView([40.41, -3.70], 6);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        map.on('click', function(e) {
-            if (!seleccionando) return alert("Selecciona primero un campo de Origen o Destino.");
-            actualizarPunto(e.latlng.lat, e.latlng.lng);
-        });
-    }
-
-    function setSeleccion(tipo, n, campo) {
-        seleccionando = { tipo, n, campo };
-        document.querySelectorAll('input').forEach(i => i.classList.remove('active'));
-        document.getElementById(`${tipo}_${campo}_${n}`).classList.add('active');
-    }
-
-    async function actualizarPunto(lat, lng, nombre = null) {
-        const { tipo, n, campo } = seleccionando;
-        const input = document.getElementById(`${tipo}_${campo}_${n}`);
         
-        if (!nombre) {
+        map.on('click', e => {
+            if (!activo) return alert("Selecciona primero un campo de origen o destino");
+            updatePoint(e.latlng.lat, e.latlng.lng);
+        });
+        
+        setTimeout(() => map.invalidateSize(), 500);
+    }
+
+    function crearTramo(tipo) {
+        count++;
+        const n = count;
+        const div = document.createElement('div');
+        div.className = 'grupo-card';
+        div.innerHTML = `
+            <p class="card-id">TRAMO #${n}</p>
+            <label>NOMBRES AMIGOS</label>
+            <input type="text" name="${tipo}_amigos_${n}" placeholder="Ana, Pepe, Luis..." required>
+            
+            <div class="search-box">
+                <label>ORIGEN</label>
+                <input type="text" id="${tipo}_ori_${n}" placeholder="Busca ciudad o clica mapa" onfocus="setActivo('${tipo}',${n},'ori')" autocomplete="off">
+                <div id="sug_${tipo}_ori_${n}" class="autocomplete-results"></div>
+            </div>
+
+            <div class="search-box">
+                <label>DESTINO</label>
+                <input type="text" id="${tipo}_dest_${n}" placeholder="Busca ciudad o clica mapa" onfocus="setActivo('${tipo}',${n},'dest')" autocomplete="off">
+                <div id="sug_${tipo}_dest_${n}" class="autocomplete-results"></div>
+            </div>
+
+            <label>DISTANCIA (KM)</label>
+            <input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" class="km-input" readonly required>
+        `;
+        document.getElementById('listaTrayectos').appendChild(div);
+        document.getElementById(`total_${tipo}`).value = n;
+
+        vincularAuto(`${tipo}_ori_${n}`, `sug_${tipo}_ori_${n}`);
+        vincularAuto(`${tipo}_dest_${n}`, `sug_${tipo}_dest_${n}`);
+    }
+
+    function setActivo(tipo, n, campo) {
+        activo = { tipo, n, campo };
+        document.querySelectorAll('input').forEach(i => i.classList.remove('input-active'));
+        document.getElementById(`${tipo}_${campo}_${n}`).classList.add('input-active');
+    }
+
+    function vincularAuto(inputId, sugId) {
+        const input = document.getElementById(inputId);
+        const sugBox = document.getElementById(sugId);
+
+        input.addEventListener('input', async () => {
+            if (input.value.length < 3) { sugBox.innerHTML = ''; return; }
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${input.value}&limit=5`);
+                const data = await res.json();
+                sugBox.innerHTML = '';
+                data.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'sug-item';
+                    item.innerText = p.display_name.split(',')[0] + (p.address?.city ? ", " + p.address.city : "");
+                    item.onclick = (e) => {
+                        e.stopPropagation();
+                        input.value = item.innerText;
+                        sugBox.innerHTML = '';
+                        updatePoint(parseFloat(p.lat), parseFloat(p.lon), true);
+                    };
+                    sugBox.appendChild(item);
+                });
+            } catch (e) { console.error("Error:", e); }
+        });
+        document.addEventListener('click', (e) => { if (e.target !== input) sugBox.innerHTML = ''; });
+    }
+
+    async function updatePoint(lat, lng, esAuto = false) {
+        const { tipo, n, campo } = activo;
+        const input = document.getElementById(`${tipo}_${campo}_${n}`);
+        if (!esAuto) {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
             const data = await res.json();
             input.value = data.display_name.split(',')[0];
-        } else {
-            input.value = nombre;
         }
-        
         input.dataset.lat = lat;
         input.dataset.lng = lng;
-
         if (campo === 'ori') {
-            if (markerOri) markerOri.setLatLng([lat, lng]);
-            else markerOri = L.marker([lat, lng]).addTo(map);
+            if (markerOri) map.removeLayer(markerOri);
+            markerOri = L.marker([lat, lng]).addTo(map);
         } else {
-            if (markerDest) markerDest.setLatLng([lat, lng]);
-            else markerDest = L.marker([lat, lng]).addTo(map);
+            if (markerDest) map.removeLayer(markerDest);
+            markerDest = L.marker([lat, lng]).addTo(map);
         }
-        
         map.panTo([lat, lng]);
         calcularRuta(tipo, n);
     }
 
     async function calcularRuta(tipo, n) {
-        const o = document.getElementById(`${tipo}_ori_${n}`);
-        const d = document.getElementById(`${tipo}_dest_${n}`);
-        if (o.dataset.lat && d.dataset.lat) {
-            const url = `https://router.project-osrm.org/route/v1/driving/${o.dataset.lng},${o.dataset.lat};${d.dataset.lng},${d.dataset.lat}?overview=false`;
+        const ori = document.getElementById(`${tipo}_ori_${n}`);
+        const dest = document.getElementById(`${tipo}_dest_${n}`);
+        if (ori.dataset.lat && dest.dataset.lat) {
+            const url = `https://router.project-osrm.org/route/v1/driving/${ori.dataset.lng},${ori.dataset.lat};${dest.dataset.lng},${dest.dataset.lat}?overview=false`;
             const res = await fetch(url);
             const data = await res.json();
-            if (data.routes && data.routes.length > 0) {
-                const km = (data.routes[0].distance / 1000).toFixed(1);
-                document.getElementById(`${tipo}_km_${n}`).value = km;
-                document.getElementById(`${tipo}_status_${n}`).innerText = "✅ " + km + " km";
+            if (data.routes?.[0]) {
+                document.getElementById(`${tipo}_km_${n}`).value = (data.routes[0].distance / 1000).toFixed(1);
             }
         }
     }
-
-    function agregarGrupo(tipo) {
-        gruposContador[tipo]++;
-        const n = gruposContador[tipo];
-        const div = document.createElement('div');
-        div.className = 'grupo';
-        div.innerHTML = `
-            <h4>Tramo ${n}</h4>
-            <input type="text" name="${tipo}_amigos_${n}" placeholder="Amigos (Ana, Pepe...)">
-            <div class="search-box">
-                <input type="text" id="${tipo}_ori_${n}" placeholder="📍 Origen" onfocus="setSeleccion('${tipo}',${n},'ori')" autocomplete="off">
-                <div id="res_${tipo}_ori_${n}" class="autocomplete-results"></div>
-            </div>
-            <div class="search-box">
-                <input type="text" id="${tipo}_dest_${n}" placeholder="🏁 Destino" onfocus="setSeleccion('${tipo}',${n},'dest')" autocomplete="off">
-                <div id="res_${tipo}_dest_${n}" class="autocomplete-results"></div>
-            </div>
-            <input type="number" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" readonly class="km-readonly" placeholder="0.0 km">
-            <p id="${tipo}_status_${n}" style="font-size:12px; color:green; margin:5px 0 0 0;"></p>
-        `;
-        document.getElementById(`listaGrupos${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`).appendChild(div);
-        document.getElementById(`total_grupos_${tipo}`).value = n;
-
-        configurarAutocompletado(`${tipo}_ori_${n}`, `res_${tipo}_ori_${n}`);
-        configurarAutocompletado(`${tipo}_dest_${n}`, `res_${tipo}_dest_${n}`);
-    }
-
-    function configurarAutocompletado(inputId, resId) {
-        const input = document.getElementById(inputId);
-        const resDiv = document.getElementById(resId);
-
-        input.addEventListener('input', async (e) => {
-            const query = e.target.value;
-            if (query.length < 3) { resDiv.innerHTML = ''; return; }
-
-            const results = await provider.search({ query });
-            resDiv.innerHTML = '';
-            results.slice(0, 5).forEach(r => {
-                const item = document.createElement('div');
-                item.className = 'result-item';
-                item.innerText = r.label;
-                item.onclick = () => {
-                    resDiv.innerHTML = '';
-                    actualizarPunto(r.y, r.x, r.label);
-                };
-                resDiv.appendChild(item);
-            });
-        });
-    }
-
-    window.onload = initMap;
+    window.onload = init;
 </script>
 </body>
 </html>
