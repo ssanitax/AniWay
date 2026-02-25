@@ -1,6 +1,6 @@
 # Calculadora de Gastos de Viaje - AniWay
 
-¡Bienvenido a **AniWay**, la calculadora de gastos de viaje con estilo **rave/metálico**!
+¡Bienvenido a **AniWay**, la calculadora de gastos de viaje!
 
 Esta aplicación web permite calcular cuánto debe pagar cada persona en un viaje, según los grupos, amigos y kilómetros recorridos, mostrando además un resumen por persona con sus **costes y kilómetros**.
 
@@ -30,8 +30,8 @@ Esta aplicación web permite calcular cuánto debe pagar cada persona en un viaj
 1. **Clonar el repositorio:**
 
 ```bash
-git clone https://github.com/TU_USUARIO/NOMBRE_REPO.git
-cd NOMBRE_REPO
+git clone https://github.com/ssanitax/Aniway.git
+cd Aniway
 ```
 
 2. **Crear entorno virtual (opcional):**
