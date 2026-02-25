@@ -1,169 +1,164 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AniWay - Calculadora de Viaje</title>
-    
-    <link rel="shortcut icon" href="{{ url_for('static', filename='aniway_favicon.ico') }}" type="image/x-icon">
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AniWay - Calculadora de Viaje</title>
+
+<link rel="shortcut icon" href="{{ url_for('static', filename='aniway_favicon.ico') }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
-
 <div id="layout">
-    <div id="sidebar">
-        <div class="header-container">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="neon-logo">
-            <h1>AniWay</h1>
-        </div>
 
-        <form method="POST">
-            <label class="main-label">DINERO TOTAL VIAJE (€)</label>
-            <input type="number" step="0.01" name="coste_total" class="main-input" placeholder="0.00" required>
-            
-            <h3 class="section-title">Ruta y Pasajeros</h3>
-            <div id="listaTrayectos"></div>
-            
-            <input type="hidden" id="total_ida" name="total_grupos_ida" value="0">
-            <input type="hidden" id="total_vuelta" name="total_grupos_vuelta" value="0">
-            
-            <button type="button" class="btn btn-add" onclick="crearTramo('ida')">+ AÑADIR TRAMO</button>
-            <button type="submit" class="btn btn-submit">CALCULAR REPARTO</button>
-        </form>
+<div id="sidebar">
+<div class="header-container">
+<img src="{{ url_for('static', filename='logo.png') }}" class="neon-logo">
+<h1>AniWay</h1>
+</div>
 
-        {% if resultados %}
-        <div class="results-container">
-            <h4 class="results-title">RESULTADOS:</h4>
-            {% for r in resultados %}
-            <div class="result-row">
-                <span>{{ r.nombre }}</span> 
-                <strong>{{ r.coste }} €</strong>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-    <div id="map-container"></div>
+<form method="POST">
+
+<label>TIPO DE REPARTO</label>
+<select id="modo_coste" name="modo_coste" onchange="cambiarModoCoste()">
+<option value="total">Coste total conjunto</option>
+<option value="separado">Coste separado ida / vuelta</option>
+</select>
+
+<div id="coste_total_container">
+<label>DINERO TOTAL VIAJE (€)</label>
+<input type="number" step="0.01" name="coste_total" placeholder="0.00">
+</div>
+
+<div id="coste_separado_container" style="display:none;">
+<label>COSTE IDA (€)</label>
+<input type="number" step="0.01" name="coste_ida" placeholder="0.00">
+<label>COSTE VUELTA (€)</label>
+<input type="number" step="0.01" name="coste_vuelta" placeholder="0.00">
+</div>
+
+<h3>Ruta y Pasajeros</h3>
+<div id="listaTrayectos"></div>
+
+<input type="hidden" id="total_ida" name="total_grupos_ida" value="0">
+<input type="hidden" id="total_vuelta" name="total_grupos_vuelta" value="0">
+
+<button type="button" class="btn btn-add" onclick="crearTramo('ida')">+ AÑADIR TRAMO IDA</button>
+<button type="button" class="btn btn-add" onclick="crearTramo('vuelta')">+ AÑADIR TRAMO VUELTA</button>
+<button type="submit" class="btn btn-submit">CALCULAR REPARTO</button>
+
+</form>
+
+{% if resultados %}
+<div class="results-container">
+<h4>RESULTADOS</h4>
+{% for r in resultados %}
+<div class="result-row">
+<span>{{ r.nombre }}</span>
+<strong>{{ r.coste }} € ({{ r.km }} km)</strong>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+</div>
+
+<div id="map-container"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
-    let map, markerOri, markerDest, activo = null;
-    let count = 0;
+let map, markerOri, markerDest, activo = null;
+let countIda = 0;
+let countVuelta = 0;
 
-    function init() {
-        map = L.map('map-container', { zoomControl: false }).setView([40.41, -3.70], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        
-        map.on('click', e => {
-            if (!activo) return alert("Selecciona primero un campo de origen o destino");
-            updatePoint(e.latlng.lat, e.latlng.lng);
-        });
-        
-        setTimeout(() => map.invalidateSize(), 500);
-    }
+function init(){
+map = L.map('map-container',{zoomControl:false}).setView([40.41,-3.70],6);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+map.on('click',e=>{
+if(!activo) return;
+updatePoint(e.latlng.lat,e.latlng.lng);
+});
+setTimeout(()=>map.invalidateSize(),500);
+}
 
-    function crearTramo(tipo) {
-        count++;
-        const n = count;
-        const div = document.createElement('div');
-        div.className = 'grupo-card';
-        div.innerHTML = `
-            <p class="card-id">TRAMO #${n}</p>
-            <label>NOMBRES AMIGOS</label>
-            <input type="text" name="${tipo}_amigos_${n}" placeholder="Ana, Pepe, Luis..." required>
-            
-            <div class="search-box">
-                <label>ORIGEN</label>
-                <input type="text" id="${tipo}_ori_${n}" placeholder="Busca ciudad o clica mapa" onfocus="setActivo('${tipo}',${n},'ori')" autocomplete="off">
-                <div id="sug_${tipo}_ori_${n}" class="autocomplete-results"></div>
-            </div>
+function cambiarModoCoste(){
+const modo=document.getElementById("modo_coste").value;
+document.getElementById("coste_total_container").style.display = modo==="total"?"block":"none";
+document.getElementById("coste_separado_container").style.display = modo==="separado"?"block":"none";
+}
 
-            <div class="search-box">
-                <label>DESTINO</label>
-                <input type="text" id="${tipo}_dest_${n}" placeholder="Busca ciudad o clica mapa" onfocus="setActivo('${tipo}',${n},'dest')" autocomplete="off">
-                <div id="sug_${tipo}_dest_${n}" class="autocomplete-results"></div>
-            </div>
+function crearTramo(tipo){
+let n;
+if(tipo==="ida"){countIda++; n=countIda; document.getElementById("total_ida").value=countIda;}
+else{countVuelta++; n=countVuelta; document.getElementById("total_vuelta").value=countVuelta;}
 
-            <label>DISTANCIA (KM)</label>
-            <input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" class="km-input" readonly required>
-        `;
-        document.getElementById('listaTrayectos').appendChild(div);
-        document.getElementById(`total_${tipo}`).value = n;
+const div=document.createElement('div');
+div.className='grupo-card';
 
-        vincularAuto(`${tipo}_ori_${n}`, `sug_${tipo}_ori_${n}`);
-        vincularAuto(`${tipo}_dest_${n}`, `sug_${tipo}_dest_${n}`);
-    }
+div.innerHTML=`
+<button type="button" class="btn-remove" onclick="eliminarTramo(this,'${tipo}')">✕</button>
+<p class="card-id">${tipo.toUpperCase()} #${n}</p>
 
-    function setActivo(tipo, n, campo) {
-        activo = { tipo, n, campo };
-        document.querySelectorAll('input').forEach(i => i.classList.remove('input-active'));
-        document.getElementById(`${tipo}_${campo}_${n}`).classList.add('input-active');
-    }
+<label>NOMBRES AMIGOS</label>
+<input type="text" name="${tipo}_amigos_${n}" placeholder="Ana, Pepe, Luis..." required>
 
-    function vincularAuto(inputId, sugId) {
-        const input = document.getElementById(inputId);
-        const sugBox = document.getElementById(sugId);
+<label>ORIGEN</label>
+<input type="text" id="${tipo}_ori_${n}" onfocus="setActivo('${tipo}',${n},'ori')" autocomplete="off">
 
-        input.addEventListener('input', async () => {
-            if (input.value.length < 3) { sugBox.innerHTML = ''; return; }
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${input.value}&limit=5`);
-                const data = await res.json();
-                sugBox.innerHTML = '';
-                data.forEach(p => {
-                    const item = document.createElement('div');
-                    item.className = 'sug-item';
-                    item.innerText = p.display_name.split(',')[0] + (p.address?.city ? ", " + p.address.city : "");
-                    item.onclick = (e) => {
-                        e.stopPropagation();
-                        input.value = item.innerText;
-                        sugBox.innerHTML = '';
-                        updatePoint(parseFloat(p.lat), parseFloat(p.lon), true);
-                    };
-                    sugBox.appendChild(item);
-                });
-            } catch (e) { console.error("Error:", e); }
-        });
-        document.addEventListener('click', (e) => { if (e.target !== input) sugBox.innerHTML = ''; });
-    }
+<label>DESTINO</label>
+<input type="text" id="${tipo}_dest_${n}" onfocus="setActivo('${tipo}',${n},'dest')" autocomplete="off">
 
-    async function updatePoint(lat, lng, esAuto = false) {
-        const { tipo, n, campo } = activo;
-        const input = document.getElementById(`${tipo}_${campo}_${n}`);
-        if (!esAuto) {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-            const data = await res.json();
-            input.value = data.display_name.split(',')[0];
-        }
-        input.dataset.lat = lat;
-        input.dataset.lng = lng;
-        if (campo === 'ori') {
-            if (markerOri) map.removeLayer(markerOri);
-            markerOri = L.marker([lat, lng]).addTo(map);
-        } else {
-            if (markerDest) map.removeLayer(markerDest);
-            markerDest = L.marker([lat, lng]).addTo(map);
-        }
-        map.panTo([lat, lng]);
-        calcularRuta(tipo, n);
-    }
+<label>DISTANCIA (KM)</label>
+<input type="number" step="0.1" name="${tipo}_dist_${n}" id="${tipo}_km_${n}" class="km-input" readonly required>
+`;
 
-    async function calcularRuta(tipo, n) {
-        const ori = document.getElementById(`${tipo}_ori_${n}`);
-        const dest = document.getElementById(`${tipo}_dest_${n}`);
-        if (ori.dataset.lat && dest.dataset.lat) {
-            const url = `https://router.project-osrm.org/route/v1/driving/${ori.dataset.lng},${ori.dataset.lat};${dest.dataset.lng},${dest.dataset.lat}?overview=false`;
-            const res = await fetch(url);
-            const data = await res.json();
-            if (data.routes?.[0]) {
-                document.getElementById(`${tipo}_km_${n}`).value = (data.routes[0].distance / 1000).toFixed(1);
-            }
-        }
-    }
-    window.onload = init;
+document.getElementById("listaTrayectos").appendChild(div);
+}
+
+function eliminarTramo(btn,tipo){
+btn.closest('.grupo-card').remove();
+if(tipo==="ida"){countIda--; document.getElementById("total_ida").value=countIda;}
+else{countVuelta--; document.getElementById("total_vuelta").value=countVuelta;}
+}
+
+function setActivo(tipo,n,campo){
+activo={tipo,n,campo};
+}
+
+async function updatePoint(lat,lng){
+const {tipo,n,campo}=activo;
+const input=document.getElementById(`${tipo}_${campo}_${n}`);
+input.dataset.lat=lat;
+input.dataset.lng=lng;
+if(campo==="ori"){
+if(markerOri) map.removeLayer(markerOri);
+markerOri=L.marker([lat,lng]).addTo(map);
+}else{
+if(markerDest) map.removeLayer(markerDest);
+markerDest=L.marker([lat,lng]).addTo(map);
+}
+map.panTo([lat,lng]);
+calcularRuta(tipo,n);
+}
+
+async function calcularRuta(tipo,n){
+const ori=document.getElementById(`${tipo}_ori_${n}`);
+const dest=document.getElementById(`${tipo}_dest_${n}`);
+if(ori.dataset.lat && dest.dataset.lat){
+const url=`https://router.project-osrm.org/route/v1/driving/${ori.dataset.lng},${ori.dataset.lat};${dest.dataset.lng},${dest.dataset.lat}?overview=false`;
+const res=await fetch(url);
+const data=await res.json();
+if(data.routes?.[0]){
+document.getElementById(`${tipo}_km_${n}`).value=(data.routes[0].distance/1000).toFixed(1);
+}
+}
+}
+
+window.onload=init;
 </script>
 </body>
 </html>
