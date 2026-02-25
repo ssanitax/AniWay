@@ -1,7 +1,12 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import os
+import requests
 
 app = Flask(__name__)
+
+# Key de LocationIQ desde variables de entorno (no exponer al frontend)
+LOCATIONIQ_KEY = os.environ.get("LOCATIONIQ_KEY")
+
 
 def calcular_trayecto(grupos, coste_total):
     grupos_validos = [g for g in grupos if g["amigos"] and g["dist"] > 0]
@@ -87,6 +92,33 @@ def index():
             print(f"Error en calculo: {e}")
 
     return render_template("index.html", resultados=resultados_finales)
+
+
+@app.route("/route")
+def route():
+    """Calcula la distancia por carretera usando LocationIQ"""
+    lat1 = request.args.get("lat1")
+    lon1 = request.args.get("lon1")
+    lat2 = request.args.get("lat2")
+    lon2 = request.args.get("lon2")
+
+    if not all([lat1, lon1, lat2, lon2]):
+        return jsonify({"error": "Faltan coordenadas"}), 400
+
+    url = (
+        f"https://us1.locationiq.com/v1/directions/driving/"
+        f"{lat1},{lon1};{lat2},{lon2}?key={LOCATIONIQ_KEY}&format=json"
+    )
+
+    try:
+        resp = requests.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+        km = round(data[0]["distance"] / 1000, 1)  # metros → km
+        return jsonify({"km": km})
+    except Exception as e:
+        print("Error LocationIQ:", e)
+        return jsonify({"error": "No se pudo calcular la ruta"}), 500
 
 
 if __name__ == "__main__":
