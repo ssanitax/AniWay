@@ -55,7 +55,6 @@ def index():
                 coste_total = float(request.form.get("coste_total", 0))
                 grupos = grupos_ida + grupos_vuelta
                 brutos = calcular_trayecto(grupos, coste_total)
-
             else:
                 coste_ida = float(request.form.get("coste_ida", 0))
                 coste_vuelta = float(request.form.get("coste_vuelta", 0))
@@ -92,4 +91,4 @@ def index():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port)
