@@ -81,8 +81,10 @@ def index():
 
 @app.route("/route")
 def route():
-    lat1, lon1 = request.args.get("lat1"), request.args.get("lon1")
-    lat2, lon2 = request.args.get("lat2"), request.args.get("lon2")
+    lat1 = request.args.get("lat1")
+    lon1 = request.args.get("lon1")
+    lat2 = request.args.get("lat2")
+    lon2 = request.args.get("lon2")
 
     if not all([lat1, lon1, lat2, lon2]):
         return jsonify({"error": "Faltan coordenadas"}), 400
@@ -90,13 +92,35 @@ def route():
     if not LLAVE_API:
         return jsonify({"error": "API Key no configurada"}), 500
 
-    url = f"https://us1.locationiq.com/v1/directions/driving/{lon1},{lat1};{lon2},{lat2}?key={LLAVE_API}&format=json"
+    # Cambiamos la estructura a la que LocationIQ prefiere para evitar el Error 400
+    # Formato: direcciones/driving/lon1,lat1;lon2,lat2
+    coords = f"{lon1},{lat1};{lon2},{lat2}"
+    url = f"https://us1.locationiq.com/v1/directions/driving/{coords}"
+    
+    parametros = {
+        "key": LLAVE_API,
+        "format": "json",
+        "overview": "false" # Pedimos menos datos para que sea más rápido
+    }
 
     try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
+        # Añadimos un User-Agent genérico
+        headers = {'User-Agent': 'AniWayApp/1.0'}
+        resp = requests.get(url, params=parametros, timeout=10)
+        
+        # Si da error, ahora veremos qué dice la API
+        if resp.status_code != 200:
+            return jsonify({"error": f"API rechazada: {resp.status_code}", "server_msg": resp.text}), resp.status_code
+
         data = resp.json()
-        km = round(data[0]["distance"] / 1000, 1)
+        
+        # LocationIQ a veces devuelve la distancia dentro de 'routes'
+        if "routes" in data:
+            dist_metros = data["routes"][0]["distance"]
+        else:
+            dist_metros = data[0]["distance"]
+
+        km = round(dist_metros / 1000, 1)
         return jsonify({"km": km})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
