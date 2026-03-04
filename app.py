@@ -92,22 +92,37 @@ def route():
     lat2 = request.args.get("lat2")
     lon2 = request.args.get("lon2")
 
+    # 1. Verificamos que lleguen los datos
     if not all([lat1, lon1, lat2, lon2]):
         return jsonify({"error": "Faltan coordenadas"}), 400
 
-    if not API_KEY:
-        return jsonify({"error": "Falta API Key"}), 500
+    # 2. Verificamos la API KEY
+    # Usamos os.environ directamente para asegurar que lea el valor actual de Vercel
+    key = os.environ.get("LOCATIONIQ_KEY")
+    if not key:
+        return jsonify({"error": "La API Key no está configurada en las variables de entorno de Vercel"}), 500
 
-    url = f"https://us1.locationiq.com/v1/directions/driving/{lat1},{lon1};{lat2},{lon2}?key={API_KEY}&format=json"
+    # 3. Construimos la URL con cuidado
+    # LocationIQ usa el formato: longitud,latitud;longitud,latitud
+    url = f"https://us1.locationiq.com/v1/directions/driving/{lon1},{lat1};{lon2},{lat2}?key={key}&format=json"
 
     try:
-        resp = requests.get(url)
+        resp = requests.get(url, timeout=5)
         resp.raise_for_status()
         data = resp.json()
-        km = round(data[0]["distance"] / 1000, 1)
-        return jsonify({"km": km})
+        
+        # LocationIQ devuelve la distancia en metros, la pasamos a km
+        if data and "distance" in data[0]:
+            km = round(data[0]["distance"] / 1000, 1)
+            return jsonify({"km": km})
+        else:
+            return jsonify({"error": "Formato de respuesta inesperado"}), 500
+            
+    except requests.exceptions.HTTPError as e:
+        # Esto nos dirá si LocationIQ nos da error 401 (clave mal) o 429 (sin créditos)
+        return jsonify({"error": f"Error de la API externa: {str(e)}"}), 500
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+        return jsonify({"error": f"Error interno: {str(e)}"}), 500
+    
 if __name__ == "__main__":
     app.run(debug=True)
