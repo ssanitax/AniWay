@@ -81,46 +81,47 @@ def index():
 
 @app.route("/route")
 def route():
-    lat1 = request.args.get("lat1")
-    lon1 = request.args.get("lon1")
-    lat2 = request.args.get("lat2")
-    lon2 = request.args.get("lon2")
-
-    if not all([lat1, lon1, lat2, lon2]):
-        return jsonify({"error": "Faltan coordenadas"}), 400
-
-    if not LLAVE_API:
-        return jsonify({"error": "API Key no configurada"}), 500
-
-    # Cambiamos la estructura a la que LocationIQ prefiere para evitar el Error 400
-    # Formato: direcciones/driving/lon1,lat1;lon2,lat2
-    coords = f"{lon1},{lat1};{lon2},{lat2}"
-    url = f"https://us1.locationiq.com/v1/directions/driving/{coords}"
-    
-    parametros = {
-        "key": LLAVE_API,
-        "format": "json",
-        "overview": "false" # Pedimos menos datos para que sea más rápido
-    }
-
     try:
-        # Añadimos un User-Agent genérico
-        headers = {'User-Agent': 'AniWayApp/1.0'}
-        resp = requests.get(url, params=parametros, timeout=10)
+        # 1. Obtener coordenadas
+        la1, lo1 = request.args.get("lat1"), request.args.get("lon1")
+        la2, lo2 = request.args.get("lat2"), request.args.get("lon2")
+
+        if not all([la1, lo1, la2, lo2]):
+            return jsonify({"error": "Faltan coordenadas"}), 400
+
+        # 2. REDONDEAR a 6 decimales (esto soluciona el InvalidQuery)
+        # LocationIQ prefiere lon1,lat1;lon2,lat2
+        lon1, lat1 = round(float(lo1), 6), round(float(la1), 6)
+        lon2, lat2 = round(float(lo2), 6), round(float(la2), 6)
+
+        if not LLAVE_API:
+            return jsonify({"error": "API Key no configurada"}), 500
+
+        # 3. Construir URL limpia
+        # Importante: sin espacios entre las coordenadas
+        url = f"https://us1.locationiq.com/v1/directions/driving/{lon1},{lat1};{lon2},{lat2}"
         
-        # Si da error, ahora veremos qué dice la API
+        params = {
+            "key": LLAVE_API,
+            "format": "json"
+        }
+
+        resp = requests.get(url, params=params, timeout=10)
+        
         if resp.status_code != 200:
-            return jsonify({"error": f"API rechazada: {resp.status_code}", "server_msg": resp.text}), resp.status_code
+            return jsonify({"error": f"API Error {resp.status_code}", "server_msg": resp.text}), resp.status_code
 
         data = resp.json()
         
-        # LocationIQ a veces devuelve la distancia dentro de 'routes'
-        if "routes" in data:
-            dist_metros = data["routes"][0]["distance"]
+        # 4. Extraer distancia (está en metros)
+        # Intentamos los dos formatos posibles de respuesta de la API
+        if "routes" in data and len(data["routes"]) > 0:
+            distancia = data["routes"][0]["distance"]
         else:
-            dist_metros = data[0]["distance"]
+            distancia = data[0]["distance"]
 
-        km = round(dist_metros / 1000, 1)
+        km = round(distancia / 1000, 1)
         return jsonify({"km": km})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
