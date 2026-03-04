@@ -83,45 +83,52 @@ def index():
 def route():
     try:
         # 1. Obtener coordenadas
-        la1, lo1 = request.args.get("lat1"), request.args.get("lon1")
-        la2, lo2 = request.args.get("lat2"), request.args.get("lon2")
+        la1 = request.args.get("lat1")
+        lo1 = request.args.get("lon1")
+        la2 = request.args.get("lat2")
+        lo2 = request.args.get("lon2")
 
         if not all([la1, lo1, la2, lo2]):
             return jsonify({"error": "Faltan coordenadas"}), 400
 
-        # 2. REDONDEAR a 6 decimales (esto soluciona el InvalidQuery)
-        # LocationIQ prefiere lon1,lat1;lon2,lat2
-        lon1, lat1 = round(float(lo1), 6), round(float(la1), 6)
-        lon2, lat2 = round(float(lo2), 6), round(float(la2), 6)
+        # 2. Redondeo estricto a 6 decimales (Vital para evitar InvalidQuery)
+        lat1, lon1 = round(float(la1), 6), round(float(lo1), 6)
+        lat2, lon2 = round(float(la2), 6), round(float(lo2), 6)
 
         if not LLAVE_API:
-            return jsonify({"error": "API Key no configurada"}), 500
+            return jsonify({"error": "API Key vacía en el servidor"}), 500
 
-        # 3. Construir URL limpia
-        # Importante: sin espacios entre las coordenadas
-        url = f"https://us1.locationiq.com/v1/directions/driving/{lon1},{lat1};{lon2},{lat2}"
-        
-        params = {
-            "key": LLAVE_API,
-            "format": "json"
-        }
+        # 3. URL FORMATEADA AL MILÍMETRO
+        # Algunos clusters de LocationIQ fallan si hay caracteres extraños.
+        # Probamos el formato de URL más simple y directo:
+        url = f"https://us1.locationiq.com/v1/directions/driving/{lon1},{lat1};{lon2},{lat2}?key={LLAVE_API}&format=json"
 
-        resp = requests.get(url, params=params, timeout=10)
+        # 4. Petición con User-Agent (Para evitar bloqueos de Vercel)
+        headers = {"User-Agent": "AniWayApp/1.0"}
+        resp = requests.get(url, headers=headers, timeout=10)
         
         if resp.status_code != 200:
-            return jsonify({"error": f"API Error {resp.status_code}", "server_msg": resp.text}), resp.status_code
+            return jsonify({
+                "error": f"Error {resp.status_code}", 
+                "server_msg": resp.text,
+                "url_enviada": url.replace(LLAVE_API, "OCULTA") # Para debug sin mostrar tu clave
+            }), resp.status_code
 
         data = resp.json()
         
-        # 4. Extraer distancia (está en metros)
-        # Intentamos los dos formatos posibles de respuesta de la API
-        if "routes" in data and len(data["routes"]) > 0:
-            distancia = data["routes"][0]["distance"]
-        else:
-            distancia = data[0]["distance"]
+        # 5. Extracción segura del KM
+        # La API puede devolver la distancia en la raíz o dentro de 'routes'
+        distancia = 0
+        if isinstance(data, list) and len(data) > 0:
+            distancia = data[0].get("distance", 0)
+        elif isinstance(data, dict) and "routes" in data:
+            distancia = data["routes"][0].get("distance", 0)
+        
+        if distancia == 0:
+            return jsonify({"error": "No se encontró ruta entre esos puntos"}), 404
 
         km = round(distancia / 1000, 1)
         return jsonify({"km": km})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Error interno: {str(e)}"}), 500
