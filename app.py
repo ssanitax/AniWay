@@ -3,11 +3,11 @@ import os
 import requests
 
 app = Flask(__name__)
+# Esto permite que el HTML acceda a la clave mediante {{ config.get('LOCATIONIQ_KEY') }}
 app.config['LOCATIONIQ_KEY'] = os.environ.get("LOCATIONIQ_KEY")
 
-# Key de LocationIQ desde variables de entorno (no exponer al frontend)
-LOCATIONIQ_KEY = os.environ.get("LOCATIONIQ_KEY")
-
+# Esta es la variable que usa tu función route() interna
+LOCATIONIQ_KEY = app.config['LOCATIONIQ_KEY']
 
 def calcular_trayecto(grupos, coste_total):
     grupos_validos = [g for g in grupos if g["amigos"] and g["dist"] > 0]
