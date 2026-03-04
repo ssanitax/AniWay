@@ -4,9 +4,10 @@ import requests
 
 app = Flask(__name__)
 
-# Configuración de la clave
-API_KEY = os.environ.get("LOCATIONIQ_KEY", "")
-app.config['LOCATIONIQ_KEY'] = API_KEY
+# Intentar cargar la clave de las variables de entorno de Vercel
+# Usamos os.environ.get para que no de error si no existe aún
+LLAVE = os.environ.get("LOCATIONIQ_KEY")
+app.config['LOCATIONIQ_KEY'] = LLAVE
 
 def calcular_trayecto(grupos, coste_total):
     grupos_validos = [g for g in grupos if g["amigos"] and g["dist"] > 0]
@@ -17,8 +18,8 @@ def calcular_trayecto(grupos, coste_total):
     resultados = []
 
     for g in grupos_validos:
-        coste_grupo = (g["dist"] / total_dist) * coste_total
-        coste_individual = coste_grupo / len(g["amigos"])
+        coste_group = (g["dist"] / total_dist) * coste_total
+        coste_individual = coste_group / len(g["amigos"])
 
         for amigo in g["amigos"]:
             resultados.append({
@@ -38,7 +39,7 @@ def index():
             grupos_vuelta = []
 
             for tipo in ["ida", "vuelta"]:
-                total_str = request.form.get(f"total_groups_{tipo}", "0") # Corregido nombre campo
+                total_str = request.form.get(f"total_groups_{tipo}", "0")
                 total = int(total_str) if total_str.isdigit() else 0
 
                 for i in range(1, total + 1):
@@ -97,32 +98,32 @@ def route():
         return jsonify({"error": "Faltan coordenadas"}), 400
 
     # 2. Verificamos la API KEY
-    # Usamos os.environ directamente para asegurar que lea el valor actual de Vercel
-    key = os.environ.get("LOCATIONIQ_KEY")
-    if not key:
-        return jsonify({"error": "La API Key no está configurada en las variables de entorno de Vercel"}), 500
+    if not LLAVE:
+        return jsonify({"error": "La API Key no está configurada en Vercel"}), 500
 
-    # 3. Construimos la URL con cuidado
-    # LocationIQ usa el formato: longitud,latitud;longitud,latitud
-    url = f"https://us1.locationiq.com/v1/directions/driving/{lon1},{lat1};{lon2},{lat2}?key={key}&format=json"
+    # 3. Construimos la URL (LocationIQ usa: lon,lat;lon,lat)
+    url = f"https://us1.locationiq.com/v1/directions/driving/{lon1},{lat1};{lon2},{lat2}"
+    params = {
+        "key": LLAVE,
+        "format": "json"
+    }
 
     try:
-        resp = requests.get(url, timeout=5)
-        resp.raise_for_status()
+        resp = requests.get(url, params=params, timeout=10)
+        
+        if resp.status_code != 200:
+            return jsonify({"error": f"API Error {resp.status_code}", "msg": resp.text}), 500
+            
         data = resp.json()
         
-        # LocationIQ devuelve la distancia en metros, la pasamos a km
         if data and "distance" in data[0]:
             km = round(data[0]["distance"] / 1000, 1)
             return jsonify({"km": km})
         else:
             return jsonify({"error": "Formato de respuesta inesperado"}), 500
             
-    except requests.exceptions.HTTPError as e:
-        # Esto nos dirá si LocationIQ nos da error 401 (clave mal) o 429 (sin créditos)
-        return jsonify({"error": f"Error de la API externa: {str(e)}"}), 500
     except Exception as e:
-        return jsonify({"error": f"Error interno: {str(e)}"}), 500
-    
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True)
