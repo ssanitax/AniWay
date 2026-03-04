@@ -4,7 +4,7 @@ import requests
 
 app = Flask(__name__)
 
-# Configuración de la clave para el HTML y para el servidor
+# Configuración de la clave
 API_KEY = os.environ.get("LOCATIONIQ_KEY", "")
 app.config['LOCATIONIQ_KEY'] = API_KEY
 
@@ -38,7 +38,7 @@ def index():
             grupos_vuelta = []
 
             for tipo in ["ida", "vuelta"]:
-                total_str = request.form.get(f"total_grupos_{tipo}", "0")
+                total_str = request.form.get(f"total_groups_{tipo}", "0") # Corregido nombre campo
                 total = int(total_str) if total_str.isdigit() else 0
 
                 for i in range(1, total + 1):
@@ -87,14 +87,16 @@ def index():
 
 @app.route("/route")
 def route():
-    lat1, lon1 = request.args.get("lat1"), request.args.get("lon1")
-    lat2, lon2 = request.args.get("lat2"), request.args.get("lon2")
+    lat1 = request.args.get("lat1")
+    lon1 = request.args.get("lon1")
+    lat2 = request.args.get("lat2")
+    lon2 = request.args.get("lon2")
 
     if not all([lat1, lon1, lat2, lon2]):
         return jsonify({"error": "Faltan coordenadas"}), 400
 
     if not API_KEY:
-        return jsonify({"error": "Falta la API Key en Vercel"}), 500
+        return jsonify({"error": "Falta API Key"}), 500
 
     url = f"https://us1.locationiq.com/v1/directions/driving/{lat1},{lon1};{lat2},{lon2}?key={API_KEY}&format=json"
 
