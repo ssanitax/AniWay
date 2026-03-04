@@ -3,11 +3,12 @@ import os
 import requests
 
 app = Flask(__name__)
-# Esto permite que el HTML acceda a la clave mediante {{ config.get('LOCATIONIQ_KEY') }}
-app.config['LOCATIONIQ_KEY'] = os.environ.get("LOCATIONIQ_KEY")
 
-# Esta es la variable que usa tu función route() interna
-LOCATIONIQ_KEY = app.config['LOCATIONIQ_KEY']
+# 1. Cargamos la clave desde el entorno de Vercel
+# 2. La metemos en config para el HTML
+# 3. La guardamos en una variable para la función route()
+LLAVE_API = os.environ.get("LOCATIONIQ_KEY")
+app.config['LOCATIONIQ_KEY'] = LLAVE_API
 
 def calcular_trayecto(grupos, coste_total):
     grupos_validos = [g for g in grupos if g["amigos"] and g["dist"] > 0]
@@ -107,8 +108,9 @@ def route():
         return jsonify({"error": "Faltan coordenadas"}), 400
 
     url = (
+        url = (
         f"https://us1.locationiq.com/v1/directions/driving/"
-        f"{lat1},{lon1};{lat2},{lon2}?key={LOCATIONIQ_KEY}&format=json"
+        f"{lat1},{lon1};{lat2},{lon2}?key={LLAVE_API}&format=json"
     )
 
     try:
