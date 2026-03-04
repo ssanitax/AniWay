@@ -88,42 +88,42 @@ def index():
 
 @app.route("/route")
 def route():
+    # Extraemos los datos que envía el JS
     lat1 = request.args.get("lat1")
     lon1 = request.args.get("lon1")
     lat2 = request.args.get("lat2")
     lon2 = request.args.get("lon2")
 
-    # 1. Verificamos que lleguen los datos
     if not all([lat1, lon1, lat2, lon2]):
         return jsonify({"error": "Faltan coordenadas"}), 400
 
-    # 2. Verificamos la API KEY
-    if not LLAVE:
-        return jsonify({"error": "La API Key no está configurada en Vercel"}), 500
-
-    # 3. Construimos la URL (LocationIQ usa: lon,lat;lon,lat)
-    url = f"https://us1.locationiq.com/v1/directions/driving/{lon1},{lat1};{lon2},{lat2}"
-    params = {
-        "key": LLAVE,
-        "format": "json"
-    }
+    # Usamos la clave que ya sabemos que funciona
+    key = os.environ.get("LOCATIONIQ_KEY")
+    
+    # IMPORTANTE: LocationIQ usa lon,lat;lon,lat
+    # Construimos la URL con el orden correcto
+    url = f"https://us1.locationiq.com/v1/directions/driving/{lon1},{lat1};{lon2},{lat2}?key={key}&format=json"
 
     try:
-        resp = requests.get(url, params=params, timeout=10)
+        # Añadimos un User-Agent para que la API no nos bloquee
+        headers = {"User-Agent": "AniWay-App"}
+        resp = requests.get(url, headers=headers, timeout=10)
         
+        # Si la API responde con error, queremos ver qué dice exactamente
         if resp.status_code != 200:
-            return jsonify({"error": f"API Error {resp.status_code}", "msg": resp.text}), 500
-            
+            return jsonify({"error": f"API Error {resp.status_code}", "detalle": resp.text}), 500
+
         data = resp.json()
         
-        if data and "distance" in data[0]:
-            km = round(data[0]["distance"] / 1000, 1)
-            return jsonify({"km": km})
-        else:
-            return jsonify({"error": "Formato de respuesta inesperado"}), 500
-            
+        # Extraemos la distancia (viene en metros) y pasamos a KM
+        distancia_metros = data[0]["distance"]
+        km = round(distancia_metros / 1000, 1)
+        
+        return jsonify({"km": km})
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # Si algo falla en Python, esto nos dirá qué es
+        return jsonify({"error": "Excepción en servidor", "mensaje": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
