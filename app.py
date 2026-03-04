@@ -3,6 +3,7 @@ import os
 import requests
 
 app = Flask(__name__)
+app.config['LOCATIONIQ_KEY'] = os.environ.get("LOCATIONIQ_KEY")
 
 # Key de LocationIQ desde variables de entorno (no exponer al frontend)
 LOCATIONIQ_KEY = os.environ.get("LOCATIONIQ_KEY")
