@@ -1,0 +1,2 @@
+# Bloquear acceso HTTP a los JSON de cuentas/viajes
+Require all denied

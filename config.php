@@ -20,12 +20,46 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (!is_dir(DATA_PATH)) {
-    mkdir(DATA_PATH, 0755, true);
+/**
+ * Crea carpetas/archivos de datos si es posible.
+ * No lanza Warning si el servidor web no tiene permisos de escritura.
+ */
+function ensure_data_storage(): bool
+{
+    if (!is_dir(DATA_PATH) && !@mkdir(DATA_PATH, 0775, true) && !is_dir(DATA_PATH)) {
+        return false;
+    }
+    if (!is_dir(TRIPS_DIR) && !@mkdir(TRIPS_DIR, 0775, true) && !is_dir(TRIPS_DIR)) {
+        return false;
+    }
+
+    if (!file_exists(USERS_FILE)) {
+        if (!is_writable(DATA_PATH)) {
+            return false;
+        }
+        $ok = @file_put_contents(
+            USERS_FILE,
+            json_encode(['users' => []], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+        );
+        if ($ok === false) {
+            return false;
+        }
+    }
+
+    return is_writable(DATA_PATH) && is_writable(TRIPS_DIR) && is_writable(USERS_FILE);
 }
-if (!is_dir(TRIPS_DIR)) {
-    mkdir(TRIPS_DIR, 0755, true);
-}
-if (!file_exists(USERS_FILE)) {
-    file_put_contents(USERS_FILE, json_encode(['users' => []], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+if (!ensure_data_storage()) {
+    http_response_code(500);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>AniWay — Permisos</title></head><body style="font-family:sans-serif;max-width:640px;margin:40px auto;padding:0 16px;line-height:1.5">';
+    echo '<h1>Faltan permisos de escritura</h1>';
+    echo '<p>PHP no puede escribir en <code>data/</code>. En el servidor ejecuta:</p>';
+    echo '<pre style="background:#111;color:#eee;padding:14px;border-radius:8px;overflow:auto">';
+    echo "sudo chown -R www-data:www-data /var/www/html/AniWay/data\n";
+    echo "sudo chmod -R 775 /var/www/html/AniWay/data\n";
+    echo '</pre>';
+    echo '<p>Si tu usuario de Apache/Nginx no es <code>www-data</code>, sustituye por el correcto (<code>apache</code>, <code>nginx</code>, etc.).</p>';
+    echo '</body></html>';
+    exit;
 }

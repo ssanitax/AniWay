@@ -47,6 +47,17 @@ php -S localhost:8000
 
 Abre `http://localhost:8000/login.php`, regístrate y calcula viajes.
 
+## Apache (/var/www/html)
+
+El usuario del servidor web debe poder escribir en `data/`:
+
+```bash
+sudo chown -R www-data:www-data /var/www/html/AniWay/data
+sudo chmod -R 775 /var/www/html/AniWay/data
+```
+
+Si el usuario no es `www-data`, usa `apache` o `nginx` según tu distro.
+
 ## Qué hace
 
 - **Login / registro**: cuentas en `data/users.json` (contraseñas hasheadas).

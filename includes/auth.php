@@ -5,17 +5,18 @@ require_once __DIR__ . '/../config.php';
 
 function load_users(): array
 {
-    $raw = file_get_contents(USERS_FILE);
+    if (!file_exists(USERS_FILE)) {
+        return ['users' => []];
+    }
+    $raw = @file_get_contents(USERS_FILE);
     $data = json_decode($raw ?: '{"users":[]}', true);
     return is_array($data) ? $data : ['users' => []];
 }
 
 function save_users(array $data): bool
 {
-    return file_put_contents(
-        USERS_FILE,
-        json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-    ) !== false;
+    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    return @file_put_contents(USERS_FILE, $json, LOCK_EX) !== false;
 }
 
 function find_user(string $username): ?array
@@ -50,10 +51,14 @@ function register_user(string $username, string $password): array
         'created_at' => date('c'),
     ];
     $data['users'][] = $user;
-    save_users($data);
+    if (!save_users($data)) {
+        return ['ok' => false, 'error' => 'No se pudo guardar la cuenta. Revisa permisos de data/.'];
+    }
 
     $tripsFile = TRIPS_DIR . '/' . $user['id'] . '.json';
-    file_put_contents($tripsFile, json_encode(['trips' => []], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    if (@file_put_contents($tripsFile, json_encode(['trips' => []], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) === false) {
+        return ['ok' => false, 'error' => 'No se pudo crear el historial. Revisa permisos de data/trips/.'];
+    }
 
     return ['ok' => true, 'user' => $user];
 }
