@@ -1,85 +1,54 @@
-# Calculadora de Gastos de Viaje - AniWay
+# AniWay (PHP)
 
-¡Bienvenido a **AniWay**, la calculadora de gastos de viaje!
+Calculadora de gastos de viaje con login, historial por cuenta (JSON) y rutas limitadas a **España**.
 
-Esta aplicación web permite calcular cuánto debe pagar cada persona en un viaje, según los grupos, amigos y kilómetros recorridos, mostrando además un resumen por persona con sus **costes y kilómetros**.
-
----
-
-## 📦 Estructura del proyecto
+## Estructura
 
 ```
 /AniWay
-│
-├─ app.py
-├─ requirements.txt
-├─ README.md
-├─ .gitignore
-├─ templates/
-│   └─ index.html
-└─ static/
-    ├─ style.css
-    ├─ logo.png
-    └─ aniway_favicon.ico
+├── index.php              # App principal (requiere login)
+├── login.php
+├── register.php
+├── logout.php
+├── config.php
+├── api/
+│   ├── route.php          # Distancia (solo España)
+│   └── trips.php          # Calcular + guardar viajes
+├── includes/
+│   ├── auth.php
+│   ├── spain.php
+│   └── trips.php
+├── data/
+│   ├── users.json         # Cuentas (local, no versionado)
+│   └── trips/{userId}.json
+└── static/
+    ├── app.js
+    ├── style.css
+    ├── logo.png
+    └── aniway_favicon.ico
 ```
 
----
+## Requisitos
 
-## 🚀 Instalación y uso
+- PHP 8+ con extensiones `curl` y `json`
+- Clave de [LocationIQ](https://locationiq.com/)
 
-1. **Clonar el repositorio:**
+## Arranque local
 
 ```bash
-git clone https://github.com/ssanitax/Aniway.git
-cd Aniway
+# Windows (PowerShell)
+$env:LOCATIONIQ_KEY="tu_clave"
+php -S localhost:8000
+
+# Linux / macOS
+export LOCATIONIQ_KEY="tu_clave"
+php -S localhost:8000
 ```
 
-2. **Crear entorno virtual (opcional):**
+Abre `http://localhost:8000/login.php`, regístrate y calcula viajes.
 
-```bash
-python -m venv venv
-# Activar entorno
-# Windows
-venv\Scripts\activate
-# Linux / Mac
-source venv/bin/activate
-```
+## Qué hace
 
-3. **Instalar dependencias:**
-
-```bash
-pip install -r requirements.txt
-```
-
-4. **Ejecutar la aplicación:**
-
-```bash
-python app.py
-```
-
-5. **Abrir en navegador:**
-   `http://127.0.0.1:5000/`
-
----
-
-## 🎨 Características
-
-* Logo animado y redondeado.
-* Estilo rave/metálico en formulario y botones.
-* Grupos de ida y vuelta dinámicos.
-* Resumen por persona con coste y kilómetros.
-
----
-
-## ⚙️ Tecnologías
-
-* Python 3
-* Flask
-* HTML / CSS / JavaScript
-
----
-
-## 📝 Licencia
-
-Proyecto de ejemplo para aprendizaje y uso personal.
-
+- **Login / registro**: cuentas en `data/users.json` (contraseñas hasheadas).
+- **Últimos viajes**: cada cálculo se guarda en `data/trips/{id}.json` (máx. 10 por cuenta).
+- **API / mapa**: solo coordenadas dentro de España (península, Baleares y Canarias).
