@@ -33,6 +33,17 @@ Calculadora de gastos de viaje con login, historial por cuenta (JSON) y rutas li
 - PHP 8+ con extensiones `curl` y `json`
 - Clave de [LocationIQ](https://locationiq.com/)
 
+## Clave LocationIQ
+
+En el servidor, en la raíz del proyecto:
+
+```bash
+cp .env.example .env
+nano .env   # LOCATIONIQ_KEY=tu_clave_real
+```
+
+Apache no suele pasar variables de entorno a PHP; por eso se usa `.env`.
+
 ## Arranque local
 
 ```bash

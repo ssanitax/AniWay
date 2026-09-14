@@ -7,8 +7,42 @@ define('USERS_FILE', DATA_PATH . '/users.json');
 define('TRIPS_DIR', DATA_PATH . '/trips');
 define('MAX_TRIPS_PER_USER', 10);
 
-// LocationIQ (definir LOCATIONIQ_KEY en el entorno o aquí)
-define('LOCATIONIQ_KEY', getenv('LOCATIONIQ_KEY') ?: '');
+/**
+ * Carga variables desde .env (KEY=VALUE) si existe.
+ * Apache suele no exponer variables de entorno a PHP.
+ */
+function load_dotenv(string $path): void
+{
+    if (!is_readable($path)) {
+        return;
+    }
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if ($lines === false) {
+        return;
+    }
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+            continue;
+        }
+        [$name, $value] = explode('=', $line, 2);
+        $name = trim($name);
+        $value = trim($value, " \t\"'");
+        if ($name === '') {
+            continue;
+        }
+        if (getenv($name) === false) {
+            putenv($name . '=' . $value);
+            $_ENV[$name] = $value;
+        }
+    }
+}
+
+load_dotenv(ROOT_PATH . '/.env');
+
+// Prioridad: entorno → .env → valor vacío (rellena LOCATIONIQ_KEY en .env)
+$locationIqKey = getenv('LOCATIONIQ_KEY') ?: ($_ENV['LOCATIONIQ_KEY'] ?? '');
+define('LOCATIONIQ_KEY', is_string($locationIqKey) ? $locationIqKey : '');
 
 // Bounding box España (península, Baleares y Canarias)
 define('SPAIN_LAT_MIN', 27.6);

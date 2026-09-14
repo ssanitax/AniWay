@@ -121,6 +121,7 @@ async function calcularRuta(tipo, n) {
             document.getElementById(`${tipo}_km_${n}`).value = data.km;
         } else {
             alert(data.error || 'No se pudo calcular la ruta');
+            console.error('route.php', res.status, data);
         }
     } catch (e) {
         alert('Error calculando ruta');
