@@ -1,50 +1,6 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config.php';
-
-function trips_file_for(string $userId): string
-{
-    return TRIPS_DIR . '/' . preg_replace('/[^a-zA-Z0-9]/', '', $userId) . '.json';
-}
-
-function load_trips(string $userId): array
-{
-    $file = trips_file_for($userId);
-    if (!file_exists($file)) {
-        return ['trips' => []];
-    }
-    $data = json_decode(file_get_contents($file) ?: '{"trips":[]}', true);
-    return is_array($data) ? $data : ['trips' => []];
-}
-
-function save_trips(string $userId, array $data): bool
-{
-    return file_put_contents(
-        trips_file_for($userId),
-        json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-    ) !== false;
-}
-
-function get_user_trips(string $userId): array
-{
-    $data = load_trips($userId);
-    return $data['trips'] ?? [];
-}
-
-function add_trip(string $userId, array $trip): array
-{
-    $data = load_trips($userId);
-    $trip['id'] = bin2hex(random_bytes(6));
-    $trip['saved_at'] = date('c');
-
-    array_unshift($data['trips'], $trip);
-    $data['trips'] = array_slice($data['trips'], 0, MAX_TRIPS_PER_USER);
-    save_trips($userId, $data);
-
-    return $trip;
-}
-
 function calcular_trayecto(array $grupos, float $costeTotal): array
 {
     $gruposValidos = array_values(array_filter(

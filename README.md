@@ -1,26 +1,19 @@
 # AniWay (PHP)
 
-Calculadora de gastos de viaje con login, historial por cuenta (JSON) y rutas limitadas a **España**.
+Calculadora de gastos de viaje. Las rutas se limitan a **España**. No guarda cuentas ni historial.
 
 ## Estructura
 
 ```
 /AniWay
-├── index.php              # App principal (requiere login)
-├── login.php
-├── register.php
-├── logout.php
+├── index.php              # Calculadora
 ├── config.php
 ├── api/
 │   ├── route.php          # Distancia (solo España)
-│   └── trips.php          # Calcular + guardar viajes
+│   └── trips.php          # Calcular el reparto
 ├── includes/
-│   ├── auth.php
 │   ├── spain.php
 │   └── trips.php
-├── data/
-│   ├── users.json         # Cuentas (local, no versionado)
-│   └── trips/{userId}.json
 └── static/
     ├── app.js
     ├── style.css
@@ -56,21 +49,11 @@ export LOCATIONIQ_KEY="tu_clave"
 php -S localhost:8000
 ```
 
-Abre `http://localhost:8000/login.php`, regístrate y calcula viajes.
+Abre `http://localhost:8000/` y calcula viajes.
 
-## Apache (/var/www/html)
-
-El usuario del servidor web debe poder escribir en `data/`:
-
-```bash
-sudo chown -R www-data:www-data /var/www/html/AniWay/data
-sudo chmod -R 775 /var/www/html/AniWay/data
-```
-
-Si el usuario no es `www-data`, usa `apache` o `nginx` según tu distro.
+Con XAMPP: `http://localhost/AniWay/`.
 
 ## Qué hace
 
-- **Login / registro**: cuentas en `data/users.json` (contraseñas hasheadas).
-- **Últimos viajes**: cada cálculo se guarda en `data/trips/{id}.json` (máx. 10 por cuenta).
+- **Reparto**: calcula el coste por persona a partir de los kilómetros de cada tramo.
 - **API / mapa**: solo coordenadas dentro de España (península, Baleares y Canarias).

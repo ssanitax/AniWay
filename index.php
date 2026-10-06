@@ -1,12 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/includes/auth.php';
-require_once __DIR__ . '/includes/trips.php';
 require_once __DIR__ . '/config.php';
-
-$user = require_login();
-$trips = get_user_trips($user['id']);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -27,10 +22,6 @@ $trips = get_user_trips($user['id']);
 <img src="static/logo.png" class="neon-logo" alt="AniWay">
 <div class="header-text">
 <h1>AniWay</h1>
-<p class="user-bar">
-    <span><?= htmlspecialchars($user['username'], ENT_QUOTES, 'UTF-8') ?></span>
-    <a href="logout.php">Salir</a>
-</p>
 </div>
 </div>
 
@@ -70,30 +61,6 @@ $trips = get_user_trips($user['id']);
 <div id="results-list"></div>
 </div>
 
-<div class="history-container">
-<h4>ÚLTIMOS VIAJES</h4>
-<div id="history-list">
-<?php if (!$trips): ?>
-<p class="history-empty">Aún no hay viajes guardados.</p>
-<?php else: ?>
-<?php foreach ($trips as $trip): ?>
-<div class="history-item">
-<div class="history-meta">
-<span><?= htmlspecialchars(date('d/m/Y H:i', strtotime($trip['saved_at'] ?? 'now')), ENT_QUOTES, 'UTF-8') ?></span>
-<span><?= count($trip['resultados'] ?? []) ?> personas</span>
-</div>
-<?php foreach ($trip['resultados'] ?? [] as $r): ?>
-<div class="result-row">
-<span><?= htmlspecialchars($r['nombre'], ENT_QUOTES, 'UTF-8') ?></span>
-<strong><?= htmlspecialchars((string) $r['coste'], ENT_QUOTES, 'UTF-8') ?> € (<?= htmlspecialchars((string) $r['km'], ENT_QUOTES, 'UTF-8') ?> km)</strong>
-</div>
-<?php endforeach; ?>
-</div>
-<?php endforeach; ?>
-<?php endif; ?>
-</div>
-</div>
-
 </div>
 
 <div id="map-container"></div>
@@ -104,8 +71,7 @@ window.ANIWAY = {
     spainBounds: [
         [<?= SPAIN_LAT_MIN ?>, <?= SPAIN_LON_MIN ?>],
         [<?= SPAIN_LAT_MAX ?>, <?= SPAIN_LON_MAX ?>]
-    ],
-    initialTrips: <?= json_encode($trips, JSON_UNESCAPED_UNICODE) ?>
+    ]
 };
 </script>
 <script src="static/app.js"></script>

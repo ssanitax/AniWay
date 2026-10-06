@@ -4,11 +4,6 @@ venv/
 __pycache__/
 *.pyc
 
-# Datos de usuarios y viajes (contienen hashes / historial)
-data/users.json
-data/trips/*.json
-!data/trips/.gitkeep
-
 # IDE / SO
 .idea/
 .vscode/
