@@ -138,7 +138,11 @@ try {
             $status = (int) $m[1];
         }
         if ($body === false) {
-            json_error(500, 'Error de conexión (allow_url_fopen/cURL no disponibles)');
+            $hint = 'Activa las extensiones curl y openssl en php.ini';
+            if (stripos(PHP_OS_FAMILY, 'Windows') !== false) {
+                $hint = 'En Windows usa el PHP de XAMPP (C:\\xampp\\php\\php.exe -S localhost:8000) o Apache de XAMPP. El PHP de WinGet no trae curl/openssl.';
+            }
+            json_error(500, 'Error de conexión: PHP no puede hacer HTTPS. ' . $hint);
         }
     }
 

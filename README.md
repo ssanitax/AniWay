@@ -46,27 +46,23 @@ No subas el archivo `.env` a Git (ya está en `.gitignore`).
 
 ### 4. Arrancar el servidor
 
-#### Opción A — PHP incluido (rápido)
+#### Opción A — XAMPP (recomendado en Windows)
 
-Necesitas tener `php` en el PATH.
-
-```bash
-# Windows (PowerShell), desde la carpeta del proyecto
-php -S localhost:8000
-
-# Linux / macOS
-php -S localhost:8000
-```
-
-Abre en el navegador: [http://localhost:8000/](http://localhost:8000/)
-
-#### Opción B — XAMPP (recomendado en Windows)
+El PHP de WinGet suele venir **sin** `curl` ni `openssl`, y entonces fallan las rutas y las direcciones. Usa el de XAMPP.
 
 1. Instala [XAMPP](https://www.apachefriends.org/) (Apache + PHP)
-2. Copia o enlaza el proyecto dentro de `htdocs`, por ejemplo:
-   - `C:\xampp\htdocs\AniWay`
+2. Copia o enlaza el proyecto dentro de `htdocs`, por ejemplo `C:\xampp\htdocs\AniWay`
 3. En el panel de XAMPP, arranca **Apache**
 4. Abre: [http://localhost/AniWay/](http://localhost/AniWay/)
+
+Sin Apache, con el servidor embebido de XAMPP:
+
+```powershell
+cd C:\ruta\a\AniWay
+C:\xampp\php\php.exe -S localhost:8000
+```
+
+Abre [http://localhost:8000/](http://localhost:8000/)
 
 Enlace simbólico (opcional, para no duplicar la carpeta):
 
@@ -74,6 +70,14 @@ Enlace simbólico (opcional, para no duplicar la carpeta):
 # PowerShell como administrador
 New-Item -ItemType Junction -Path "C:\xampp\htdocs\AniWay" -Target "C:\ruta\a\AniWay"
 ```
+
+#### Opción B — PHP del sistema (Linux / macOS)
+
+```bash
+php -S localhost:8000
+```
+
+Abre [http://localhost:8000/](http://localhost:8000/). Comprueba que existan las extensiones: `php -m | grep -E 'curl|openssl'`.
 
 ## Comprobar que funciona
 
@@ -85,7 +89,8 @@ New-Item -ItemType Junction -Path "C:\xampp\htdocs\AniWay" -Target "C:\ruta\a\An
 Si falla la ruta, revisa:
 
 - Que exista `.env` en la raíz y `LOCATIONIQ_KEY` esté bien escrita
-- Que PHP tenga `curl` activo (`php -m` debe listar `curl`)
+- Que PHP tenga `curl` y `openssl` (`php -m` debe listarlos). En Windows: `C:\xampp\php\php.exe -m`
+- Si ves *Error de conexión* / *cURL no disponibles*: no uses el `php` de WinGet; arranca con `C:\xampp\php\php.exe -S localhost:8000` o con Apache de XAMPP
 - En XAMPP: que Apache esté en marcha y la URL sea la de `htdocs`
 
 ## Estructura
